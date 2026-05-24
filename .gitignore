@@ -1,0 +1,29 @@
+# Generierte Inhalte (Bilder, Excel-Archiv, History, Vorschläge, Settings)
+buffet/
+
+# Lokale Backups
+backups/
+
+# Python-Bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Crash-Logs
+*.log
+tagesbuffet_crash.log
+
+# Lokale GUI-Einstellungen (Pfade + Sprache pro Rechner)
+.gui_settings.json
+
+# Windows-Verknüpfungen (werden lokal angelegt)
+*.lnk
+
+# IDE / Editoren
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Claude Code Worktrees & Sessions
+.claude/
