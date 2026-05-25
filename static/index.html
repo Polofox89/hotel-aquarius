@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tagesbuffet · Hotel Aquarius</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <h1>TAGESBUFFET</h1>
+      <span class="subtitle">Hotel Aquarius · Norddeich</span>
+    </div>
+    <div class="header-actions">
+      <button id="lang-de" class="lang-btn active" data-lang="de">DE</button>
+      <button id="lang-ar" class="lang-btn" data-lang="ar">AR</button>
+    </div>
+  </div>
+</header>
+
+<!-- ── Hauptlayout (Eingabe links, Vorschau rechts) ─────────────────────── -->
+<main>
+  <!-- Linke Spalte: Eingabe -->
+  <section class="col-input">
+
+    <!-- Datum -->
+    <fieldset>
+      <legend data-i18n="date">📅 Datum</legend>
+      <div class="row">
+        <input type="date" id="date-input">
+        <button class="btn-secondary" id="btn-today" data-i18n="today">Heute</button>
+        <button class="btn-secondary" id="btn-tomorrow" data-i18n="tomorrow">Morgen</button>
+      </div>
+      <div class="date-display" id="date-display"></div>
+    </fieldset>
+
+    <!-- KI-Freitext -->
+    <fieldset>
+      <legend data-i18n="ki_input">✏ KI-Freitext (optional)</legend>
+      <textarea
+        id="ki-text"
+        rows="3"
+        data-i18n-ph="ki_placeholder"
+        placeholder="Beispiel: Tomatensuppe, Schnitzel, Bratkartoffeln, Spaghetti Bolognese ..."
+      ></textarea>
+      <button id="btn-ki" class="btn-primary" data-i18n="ki_analyze">
+        🤖 KI-Analyse starten
+      </button>
+    </fieldset>
+
+    <!-- Menü-Slots (werden dynamisch aus /api/categories befüllt) -->
+    <fieldset>
+      <legend data-i18n="menu">📋 Menü zusammenstellen</legend>
+      <div id="slots"></div>
+    </fieldset>
+
+    <!-- Status & Aktionen -->
+    <div class="actions">
+      <button id="btn-save" class="btn-success" data-i18n="save">
+        🖼 Speichern
+      </button>
+      <div id="status" class="status"></div>
+    </div>
+
+  </section>
+
+  <!-- Rechte Spalte: Live-Vorschau -->
+  <section class="col-preview">
+    <h2 data-i18n="preview">👁 Live-Vorschau</h2>
+    <div class="preview-frame">
+      <img id="preview-img" src="" alt="Vorschau" />
+      <div id="preview-loading" class="preview-loading">⏳</div>
+    </div>
+
+    <!-- Verlauf -->
+    <details class="history-box">
+      <summary data-i18n="history">🕐 Letzte 7 Tage</summary>
+      <div id="history-list"></div>
+    </details>
+  </section>
+</main>
+
+<script src="/static/i18n.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
