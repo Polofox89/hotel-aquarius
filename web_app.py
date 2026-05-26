@@ -34,7 +34,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from tagesbuffet_generator import TagesbuffetGenerator, CATEGORIES
-from tagesbuffet_gui import (
+from buffet_core import (
     build_suggestions_from_excel,
     ki_kategorisieren,
     SLOTS,
