@@ -233,6 +233,76 @@ async def get_image(filename: str):
     return FileResponse(str(file), media_type="image/jpeg")
 
 
+@app.get("/api/latest")
+async def get_latest_image_info():
+    """Info zum neuesten Bild – für /display Auto-Polling."""
+    files = sorted(
+        IMAGES_DIR.glob("tagesbuffet_*.jpg"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if not files:
+        return {"name": None, "url": None, "mtime": None}
+    f = files[0]
+    return {
+        "name":  f.name,
+        "url":   f"/api/images/{f.name}",
+        "mtime": f.stat().st_mtime,
+    }
+
+
+@app.get("/display", response_class=HTMLResponse)
+async def display():
+    """
+    Vollbild-Anzeige des neuesten Tagesbuffet-Bildes.
+    Speziell für Fire TV / TV-Bildschirme.
+    Pollt jede Minute nach Updates, schwarzer Hintergrund, keine UI.
+    """
+    return HTMLResponse("""<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tagesbuffet · Hotel Aquarius</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #000;
+               overflow: hidden; font-family: system-ui, sans-serif; }
+  #wrap { width: 100vw; height: 100vh;
+          display: flex; align-items: center; justify-content: center; }
+  img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  #placeholder { color: #888; font-size: 1.5em; text-align: center; }
+  #placeholder .small { font-size: 0.6em; color: #444; display: block; margin-top: 1em; }
+</style>
+</head>
+<body>
+  <div id="wrap">
+    <div id="placeholder">
+      Noch kein Tagesbuffet gespeichert.
+      <span class="small">Im Admin-Bereich speichern, dann erscheint es hier automatisch.</span>
+    </div>
+  </div>
+<script>
+let currentMtime = null;
+async function poll() {
+  try {
+    const r = await fetch('/api/latest', { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.url && data.mtime !== currentMtime) {
+      currentMtime = data.mtime;
+      const wrap = document.getElementById('wrap');
+      // Cache-Buster anhängen, damit Browser garantiert die neue Datei holt
+      wrap.innerHTML = '<img src="' + data.url + '?t=' + Date.now() + '" alt="Tagesbuffet" />';
+    }
+  } catch (e) { /* still polling */ }
+}
+poll();
+setInterval(poll, 60000);  // jede Minute prüfen
+</script>
+</body>
+</html>""")
+
+
 @app.get("/api/images")
 async def list_images():
     """Liste aller gespeicherten Bilder, neueste zuerst."""
