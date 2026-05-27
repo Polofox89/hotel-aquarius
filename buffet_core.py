@@ -111,20 +111,24 @@ DEFAULT_SUGGESTIONS = {
 def build_suggestions_from_excel(archiv_file: Path, top_n: int | None = None) -> dict:
     """
     Liest das Excel-Archiv und gibt ALLE jemals verwendeten Gerichte pro
-    Kategorie zurück. Sortierung: nach Häufigkeit absteigend, dann alphabetisch.
-    DEFAULT_SUGGESTIONS werden als Sockel angehängt.
+    Kategorie zurück. Sortierung: alphabetisch (case-insensitive).
+    DEFAULT_SUGGESTIONS werden als Sockel hinzugefügt, falls fehlend.
     """
     base_defaults = {k: list(v) for k, v in DEFAULT_SUGGESTIONS.items()}
     for key, *_ in CATEGORIES:
         base_defaults.setdefault(key, [])
 
     if not (OPENPYXL_OK and archiv_file.exists()):
-        return {k: (v[:top_n] if top_n else v) for k, v in base_defaults.items()}
+        result = {
+            k: sorted(set(v), key=str.lower)
+            for k, v in base_defaults.items()
+        }
+        return {k: (v[:top_n] if top_n else v) for k, v in result.items()}
 
     try:
         wb = load_workbook(archiv_file, read_only=True, data_only=True)
         ws = wb.active
-        counts: dict = {key: collections.Counter() for key, *_ in CATEGORIES}
+        used: dict = {key: set() for key, *_ in CATEGORIES}
 
         for row in ws.iter_rows(min_row=2, values_only=True):
             if not row or len(row) < 3:
@@ -134,21 +138,23 @@ def build_suggestions_from_excel(archiv_file: Path, top_n: int | None = None) ->
                 continue
             key = LABEL_TO_KEY.get(str(kategorie).strip().upper())
             if key:
-                counts[key][str(speise).strip()] += 1
+                used[key].add(str(speise).strip())
         wb.close()
 
         result: dict = {}
         for key, *_ in CATEGORIES:
-            items = sorted(counts[key].items(), key=lambda kv: (-kv[1], kv[0].lower()))
-            names = [n for n, _ in items]
-            for d in base_defaults.get(key, []):
-                if d not in names:
-                    names.append(d)
-            result[key] = names[:top_n] if top_n else names
+            names = set(used[key])
+            names.update(base_defaults.get(key, []))   # Defaults als Sockel
+            sorted_names = sorted(names, key=str.lower)
+            result[key] = sorted_names[:top_n] if top_n else sorted_names
         return result
     except Exception as e:
         print(f"Warnung: Vorschläge aus Excel konnten nicht gelesen werden – {e}")
-        return {k: (v[:top_n] if top_n else v) for k, v in base_defaults.items()}
+        result = {
+            k: sorted(set(v), key=str.lower)
+            for k, v in base_defaults.items()
+        }
+        return {k: (v[:top_n] if top_n else v) for k, v in result.items()}
 
 
 # ── KI-Kategorisierung ────────────────────────────────────────────────────────
