@@ -36,6 +36,20 @@ function setStatus(msg, level = "info") {
   el.className = "status " + level;
 }
 
+// Status mit anklickbarem Link (z. B. Dateiname → Bild öffnen)
+function setStatusLink(prefix, linkText, url, level = "success") {
+  const el = document.getElementById("status");
+  el.className = "status " + level;
+  el.textContent = prefix;              // statischer Teil (XSS-sicher)
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.textContent = linkText;             // Dateiname als Linktext
+  a.className = "saved-link";
+  el.appendChild(a);
+}
+
 function debounce(fn, delay) {
   let t = null;
   return (...args) => {
@@ -204,7 +218,8 @@ async function saveMenu() {
     });
     if (!res.ok) throw new Error(await res.text() || res.statusText);
     const data = await res.json();
-    setStatus(`${I18N.t("saved")}: ${data.saved}`, "success");
+    // Dateiname als Link anzeigen → öffnet das gespeicherte Bild in neuem Tab
+    setStatusLink(`${I18N.t("saved")}: `, data.saved, data.url, "success");
     loadHistory();
   } catch (e) {
     console.error(e);

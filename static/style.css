@@ -250,6 +250,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .status.error   { color: var(--error); }
 .status.info    { color: var(--teal-dark); }
 
+/* Anklickbarer Dateiname nach dem Speichern */
+.saved-link {
+  color: var(--teal-dark);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.saved-link:hover { color: var(--teal); }
+
 /* ── Vorschau ────────────────────────────────────────────────────────────── */
 
 .col-preview h2 {
