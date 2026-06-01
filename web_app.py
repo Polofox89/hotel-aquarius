@@ -101,9 +101,17 @@ if STATIC_DIR.exists():
 
 # ── Routen: Frontend ──────────────────────────────────────────────────────────
 
+def _asset_version(filename: str) -> str:
+    """Versions-Stempel = mtime der Datei. Ändert sich bei jedem Deploy."""
+    try:
+        return str(int((STATIC_DIR / filename).stat().st_mtime))
+    except OSError:
+        return "0"
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    """Liefert das Frontend (index.html)."""
+    """Liefert das Frontend (index.html) mit Cache-Busting-Versionen."""
     html_path = STATIC_DIR / "index.html"
     if not html_path.exists():
         return HTMLResponse(
@@ -111,7 +119,14 @@ async def index():
             "<p>Aber kein <code>static/index.html</code> gefunden.</p>",
             status_code=200,
         )
-    return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    html = html_path.read_text(encoding="utf-8")
+    # Cache-Busting: ?v=<mtime> an jede lokale JS/CSS-URL hängen
+    for fn in ("style.css", "i18n.js", "app.js"):
+        html = html.replace(
+            f"/static/{fn}",
+            f"/static/{fn}?v={_asset_version(fn)}",
+        )
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
 # ── Routen: Metadaten ─────────────────────────────────────────────────────────
