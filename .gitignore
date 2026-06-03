@@ -15,6 +15,12 @@ data/
 *.env
 *.key
 
+# Lebensmittelkontrolle: Belegmaterial & erzeugte Berichte (vertraulich!)
+python/lebensmittelkontrolle/media/*
+!python/lebensmittelkontrolle/media/.gitkeep
+python/lebensmittelkontrolle/output/*
+!python/lebensmittelkontrolle/output/.gitkeep
+
 # Claude Code intern
 .claude/
 
