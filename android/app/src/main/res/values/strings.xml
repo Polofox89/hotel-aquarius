@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Voice Claude</string>
+
+    <!-- Hauptbildschirm -->
+    <string name="label_you">Du:</string>
+    <string name="label_claude">Claude:</string>
+    <string name="transcript_hint">Sprich oder tippe deinen Prompt …</string>
+    <string name="btn_send">Senden</string>
+    <string name="btn_mic">Mikrofon</string>
+
+    <!-- Status-Meldungen -->
+    <string name="status_idle">Bereit.</string>
+    <string name="status_listening">Höre zu … sprich jetzt.</string>
+    <string name="status_processing">Verarbeite Sprache …</string>
+    <string name="status_sending">Sende an %1$s …</string>
+    <string name="status_done">Fertig.</string>
+    <string name="status_error">Fehler.</string>
+    <string name="status_empty">Kein Text erkannt.</string>
+    <string name="status_error_speech">Spracherkennung fehlgeschlagen (Code %1$d).</string>
+    <string name="status_no_recognizer">Keine Spracherkennung auf dem Gerät verfügbar.</string>
+    <string name="status_no_mic_permission">Mikrofon-Berechtigung verweigert.</string>
+    <string name="status_no_api_key">Bitte zuerst einen API-Key in den Einstellungen hinterlegen.</string>
+    <string name="error_prefix">Fehler: %1$s</string>
+
+    <!-- Modus-Übergabe (Claude Code / Cowork) -->
+    <string name="mode_claude_code">Claude Code</string>
+    <string name="mode_cowork">Cowork</string>
+    <string name="toast_copied">In Zwischenablage kopiert – in %1$s einfügen.</string>
+    <string name="handoff_hint">Modus „%1$s": Der Text wurde in die Zwischenablage kopiert und die Oberfläche geöffnet. Dort einfügen:\n\n%2$s</string>
+
+    <!-- Einstellungen -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="cat_connection">Verbindung</string>
+    <string name="cat_model_mode">Modell &amp; Modus</string>
+    <string name="cat_voice">Spracheingabe</string>
+
+    <string name="pref_api_key_title">Anthropic API-Key</string>
+    <string name="pref_api_key_message">Dein persönlicher Schlüssel (beginnt mit „sk-ant-"). Wird nur lokal auf dem Gerät gespeichert.</string>
+    <string name="api_key_set">••••••••  (gesetzt)</string>
+    <string name="api_key_unset">Nicht gesetzt</string>
+
+    <string name="pref_mode_title">Modus</string>
+    <string name="pref_model_title">Modell</string>
+    <string name="pref_cc_url_title">Claude-Code-URL</string>
+    <string name="pref_cowork_url_title">Cowork-URL</string>
+
+    <string name="pref_language_title">Sprache der Spracherkennung</string>
+    <string name="pref_autostart_title">Mikrofon beim Start aktivieren</string>
+    <string name="pref_autostart_summary">Beginnt direkt nach dem Öffnen mit dem Zuhören.</string>
+    <string name="pref_autosend_title">Automatisch senden</string>
+    <string name="pref_autosend_summary">Schickt den erkannten Text sofort ab.</string>
+</resources>

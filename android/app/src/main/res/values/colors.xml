@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nordsee-Farbwelt -->
+    <color name="ic_launcher_background">#0E5A8A</color>
+    <color name="primary">#0E5A8A</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

@@ -1,0 +1,17 @@
+# Android / Gradle Build-Artefakte
+.gradle/
+build/
+app/build/
+captures/
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Keystores & Signaturen (niemals committen!)
+*.jks
+*.keystore
+
+# NDK / sonstiges
+.cxx/
