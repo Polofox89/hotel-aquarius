@@ -24,7 +24,9 @@ python/lebensmittelkontrolle/output/*
 python/lebensmittelkontrolle/report_data.json
 
 # Claude Code intern
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*/output/
 
 # Betriebssystem
 .DS_Store
