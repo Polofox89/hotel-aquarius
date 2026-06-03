@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App-Theme ohne ActionBar (Toolbar kommt aus dem Layout) -->
+    <style name="Theme.VoiceClaude" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+    </style>
+
+    <!-- Theme für die Einstellungen (mit ActionBar / Zurück-Pfeil) -->
+    <style name="Theme.VoiceClaude.Settings" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+    </style>
+
+</resources>

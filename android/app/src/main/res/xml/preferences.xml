@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/cat_connection">
+
+        <EditTextPreference
+            app:key="api_key"
+            app:title="@string/pref_api_key_title"
+            app:dialogTitle="@string/pref_api_key_title"
+            app:dialogMessage="@string/pref_api_key_message" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/cat_model_mode">
+
+        <ListPreference
+            app:key="mode"
+            app:title="@string/pref_mode_title"
+            app:defaultValue="chat"
+            app:entries="@array/mode_entries"
+            app:entryValues="@array/mode_values"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:key="model"
+            app:title="@string/pref_model_title"
+            app:defaultValue="claude-opus-4-8"
+            app:entries="@array/model_entries"
+            app:entryValues="@array/model_values"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:key="claude_code_url"
+            app:title="@string/pref_cc_url_title"
+            app:defaultValue="https://claude.ai/code"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:key="cowork_url"
+            app:title="@string/pref_cowork_url_title"
+            app:defaultValue="https://claude.ai"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/cat_voice">
+
+        <ListPreference
+            app:key="language"
+            app:title="@string/pref_language_title"
+            app:defaultValue="de-DE"
+            app:entries="@array/language_entries"
+            app:entryValues="@array/language_values"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreferenceCompat
+            app:key="autostart_mic"
+            app:title="@string/pref_autostart_title"
+            app:summary="@string/pref_autostart_summary"
+            app:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            app:key="auto_send"
+            app:title="@string/pref_autosend_title"
+            app:summary="@string/pref_autosend_summary"
+            app:defaultValue="true" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
