@@ -31,6 +31,12 @@ pip install -r requirements.txt
    python generate_report.py report_data.json --out output/kontrollbericht.pdf
    ```
 
+   **Oder als HTML** (eigenständig, Bilder eingebettet; im Browser via
+   „Drucken → Als PDF speichern" ausgebbar):
+   ```bash
+   python generate_report_html.py report_data.json --out output/kontrollbericht.html
+   ```
+
 ## Bewertungsstufen (Farb-Badge)
 
 | Wert          | Farbe  |

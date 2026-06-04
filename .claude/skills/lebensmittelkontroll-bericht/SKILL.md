@@ -62,13 +62,15 @@ pip install -r python/lebensmittelkontrolle/requirements.txt
    `rechtsgrundlage`, `massnahme`, `frist`, `foto` (Pfad zum Standbild),
    `foto_text`, `video_quelle`.
 
-5. **PDF erzeugen:**
+5. **Bericht erzeugen** – als PDF und/oder HTML:
    ```bash
    python generate_report.py report_data.json --out output/kontrollbericht.pdf
+   # eigenständige HTML (Bilder eingebettet, druckbar im Browser):
+   python generate_report_html.py report_data.json --out output/kontrollbericht.html
    ```
 
-6. **Ausliefern.** Das PDF dem Nutzer schicken (SendUserFile). Eine PNG-Vorschau
-   pro Seite kann vorab zur Abnahme gerendert werden (z. B. mit pymupdf).
+6. **Ausliefern.** Das PDF/HTML dem Nutzer schicken (SendUserFile). Eine
+   PNG-Vorschau pro PDF-Seite kann vorab zur Abnahme gerendert werden (pymupdf).
 
 ## Bewertungsstufen → Badge-Farbe
 
