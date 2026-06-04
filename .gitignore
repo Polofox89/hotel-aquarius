@@ -15,8 +15,18 @@ data/
 *.env
 *.key
 
+# Lebensmittelkontrolle: Belegmaterial & erzeugte Berichte (vertraulich!)
+python/lebensmittelkontrolle/media/*
+!python/lebensmittelkontrolle/media/.gitkeep
+python/lebensmittelkontrolle/output/*
+!python/lebensmittelkontrolle/output/.gitkeep
+# Arbeits-Datendatei mit realen Betriebsdaten (Vorlage: report_data.example.json)
+python/lebensmittelkontrolle/report_data.json
+
 # Claude Code intern
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*/output/
 
 # Betriebssystem
 .DS_Store

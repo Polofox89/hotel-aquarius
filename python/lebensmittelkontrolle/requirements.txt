@@ -1,0 +1,6 @@
+# Lebensmittelkontroll-Bericht – Abhängigkeiten
+# Installation: pip install -r requirements.txt
+
+reportlab>=4.0.0       # PDF-Erstellung
+Pillow>=10.0.0         # Bildverarbeitung / Skalierung
+imageio-ffmpeg>=0.4.9  # Portables ffmpeg für Standbild-Extraktion aus Videos
