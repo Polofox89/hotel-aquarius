@@ -109,6 +109,23 @@ def _asset_version(filename: str) -> str:
         return "0"
 
 
+_FAVICON_CACHE: Optional[str] = None
+
+def _favicon_data_uri() -> str:
+    """Hotel-Icon als inline data:-URI (einmal gecacht). Kein externer Request,
+    daher kein Auth-Problem auf der öffentlichen /display-Seite."""
+    global _FAVICON_CACHE
+    if _FAVICON_CACHE is None:
+        try:
+            import base64
+            p = Path(__file__).parent / "buffet_icon.png"
+            _FAVICON_CACHE = "data:image/png;base64," + \
+                base64.b64encode(p.read_bytes()).decode("ascii")
+        except OSError:
+            _FAVICON_CACHE = ""
+    return _FAVICON_CACHE
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     """Liefert das Frontend (index.html) mit Cache-Busting-Versionen."""
@@ -267,26 +284,62 @@ async def get_latest_image_info():
 
 
 @app.get("/display", response_class=HTMLResponse)
-async def display():
+async def display(rotate: int = 0):
     """
     Vollbild-Anzeige des neuesten Tagesbuffet-Bildes.
     Speziell für Fire TV / TV-Bildschirme.
+
     Pollt jede Minute nach Updates, schwarzer Hintergrund, keine UI.
+
+    Optimiert für 24/7-Dauerbetrieb:
+      - Wake Lock (Bildschirm bleibt an)
+      - Vollbild bei erster Fernbedienungs-Interaktion
+      - Auto-Reload alle 6 Stunden (Robustheit)
+
+    Query-Parameter:
+      rotate = 0 | 90 | 180 | 270
+        Für einen im Hochformat (senkrecht) montierten TV: 90 oder 270 wählen,
+        damit das Portrait-Bild aufrecht und bildschirmfüllend erscheint.
+        Beispiel: /display?rotate=90
     """
-    return HTMLResponse("""<!DOCTYPE html>
+    rotate = rotate if rotate in (0, 90, 180, 270) else 0
+
+    # Container-CSS abhängig von der Drehung.
+    # 90/270: Portrait-Container (Dimensionen getauscht), zentriert + rotiert,
+    # füllt damit den Querformat-Viewport exakt aus.
+    if rotate in (90, 270):
+        wrap_css = ("position:fixed; top:50%; left:50%; "
+                    "width:100vh; height:100vw; "
+                    f"transform:translate(-50%,-50%) rotate({rotate}deg);")
+    elif rotate == 180:
+        wrap_css = ("position:fixed; top:50%; left:50%; "
+                    "width:100vw; height:100vh; "
+                    "transform:translate(-50%,-50%) rotate(180deg);")
+    else:
+        wrap_css = "position:fixed; inset:0; width:100vw; height:100vh;"
+
+    favicon = _favicon_data_uri()
+    favicon_tag = f'<link rel="icon" href="{favicon}">' if favicon else ""
+
+    html = """<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tagesbuffet · Hotel Aquarius</title>
+__FAVICON__
 <style>
   html, body { margin: 0; padding: 0; height: 100%; background: #000;
                overflow: hidden; font-family: system-ui, sans-serif; }
-  #wrap { width: 100vw; height: 100vh;
+  #wrap { __WRAP_CSS__
           display: flex; align-items: center; justify-content: center; }
   img { max-width: 100%; max-height: 100%; object-fit: contain; }
-  #placeholder { color: #888; font-size: 1.5em; text-align: center; }
+  #placeholder { color: #888; font-size: 1.5em; text-align: center; padding: 5vw; }
   #placeholder .small { font-size: 0.6em; color: #444; display: block; margin-top: 1em; }
+  #hint { position: fixed; left: 50%; bottom: 6%; transform: translateX(-50%);
+          background: rgba(0,0,0,0.65); color: #cfeeee;
+          font-size: 1.1em; padding: 10px 22px; border-radius: 8px;
+          font-family: system-ui, sans-serif; transition: opacity 0.6s; z-index: 10; }
 </style>
 </head>
 <body>
@@ -296,7 +349,9 @@ async def display():
       <span class="small">Im Admin-Bereich speichern, dann erscheint es hier automatisch.</span>
     </div>
   </div>
+  <div id="hint">Mit OK / Klick auf Vollbild schalten</div>
 <script>
+// ── Bild-Polling (jede Minute neuestes Bild holen) ────────────────────────────
 let currentMtime = null;
 async function poll() {
   try {
@@ -306,16 +361,52 @@ async function poll() {
     if (data.url && data.mtime !== currentMtime) {
       currentMtime = data.mtime;
       const wrap = document.getElementById('wrap');
-      // Cache-Buster anhängen, damit Browser garantiert die neue Datei holt
       wrap.innerHTML = '<img src="' + data.url + '?t=' + Date.now() + '" alt="Tagesbuffet" />';
     }
-  } catch (e) { /* still polling */ }
+  } catch (e) { /* weiter pollen */ }
 }
 poll();
-setInterval(poll, 60000);  // jede Minute prüfen
+setInterval(poll, 60000);
+
+// ── Wake Lock: Bildschirm bleibt an ───────────────────────────────────────────
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch (e) { /* nicht unterstützt – Fire-TV-OS-Einstellung greift */ }
+}
+requestWakeLock();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+
+// ── Vollbild bei erster Interaktion (OK-Taste / Klick) ────────────────────────
+function hideHint() {
+  const h = document.getElementById('hint');
+  if (h) { h.style.opacity = '0'; setTimeout(() => h.remove(), 700); }
+}
+function goFullscreen() {
+  const el = document.documentElement;
+  if (el.requestFullscreen) { el.requestFullscreen().catch(() => {}); }
+  hideHint();
+}
+document.addEventListener('click',   goFullscreen, { once: true });
+document.addEventListener('keydown', goFullscreen, { once: true });
+// Hinweis nach 8 s automatisch ausblenden (z. B. bei Kiosk-Auto-Start)
+setTimeout(hideHint, 8000);
+
+// ── Robustheit: alle 6 Stunden komplett neu laden ─────────────────────────────
+setTimeout(() => location.reload(), 6 * 60 * 60 * 1000);
 </script>
 </body>
-</html>""")
+</html>"""
+
+    html = (html
+            .replace("__FAVICON__", favicon_tag)
+            .replace("__WRAP_CSS__", wrap_css))
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/images")
