@@ -8,6 +8,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 <style>
   /* Sensor-Dashboard – ergänzt das Aquarius-Teal-Schema aus style.css */
+
+  /* Logo im Header (weißer Badge, da das Logo weißen Hintergrund hat) */
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-logo {
+    height: 48px; width: auto; display: block;
+    background: #fff; padding: 5px 9px; border-radius: 8px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.18);
+  }
+  .brand-text h1 { margin: 0; }
+  .brand-text .subtitle { margin-left: 0; display: block; }
+  @media (max-width: 560px) { .brand-logo { height: 38px; } }
+
   main.dash {
     display: block;
     max-width: 1200px;
@@ -134,8 +146,11 @@
 <header>
   <div class="header-inner">
     <div class="brand">
-      <h1>🌡️ Sensoren</h1>
-      <span class="subtitle">Hotel Aquarius · Norddeich</span>
+      <img src="/static/logo.jpg" alt="Hotel Aquarius" class="brand-logo">
+      <div class="brand-text">
+        <h1>🌡️ Sensoren</h1>
+        <span class="subtitle">Hotel Aquarius · Norddeich</span>
+      </div>
     </div>
     <div class="header-actions">
       <a class="lang-btn" href="/">← Tagesbuffet</a>
