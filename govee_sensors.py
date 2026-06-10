@@ -9,8 +9,8 @@ und speichert sie in einer SQLite-Datenbank.
 
 Wichtige Eigenschaften
 ----------------------
-* Aufzeichnung NUR im konfigurierten Zeitfenster (Standard 07:00–10:00 Uhr,
-  Zeitzone Europe/Berlin).
+* Aufzeichnung läuft 24/7 (rund um die Uhr). Das Fenster 07:00–10:00 Uhr
+  (Europe/Berlin) dient nur der "Kontrolle"-Ansicht im Dashboard.
 * Alle Messwerte werden tagesweise in ``data/sensors.db`` abgelegt.
 * Robust: Fehler in einem Poll-Durchlauf legen die App nicht lahm.
 
@@ -23,11 +23,12 @@ Header:        Govee-API-Key: <key>
 Umgebungsvariablen
 ------------------
 GOVEE_API_KEY            Pflicht – ohne Key ist der Poller deaktiviert.
-GOVEE_POLL_INTERVAL_SEC  Abstand zwischen Messungen im Fenster (Default 120).
-GOVEE_WINDOW_START       Fensterbeginn "HH:MM" (Default "07:00").
-GOVEE_WINDOW_END         Fensterende  "HH:MM" (Default "10:00").
+GOVEE_POLL_INTERVAL_SEC  Abstand zwischen Messungen, 24/7 (Default 120).
+GOVEE_DEVICE_REFRESH_SEC Geräteliste-Cache in Sekunden (Default 1800).
+GOVEE_WINDOW_START       Beginn Kontroll-Ansicht "HH:MM" (Default "07:00", nur Anzeige).
+GOVEE_WINDOW_END         Ende Kontroll-Ansicht  "HH:MM" (Default "10:00", nur Anzeige).
 GOVEE_TZ                 Zeitzone (Default "Europe/Berlin").
-GOVEE_TEMP_INPUT_UNIT    Einheit der API-Werte: "auto" | "C" | "F" (Default "auto").
+GOVEE_TEMP_INPUT_UNIT    Einheit der API-Werte: "F" | "C" | "auto" (Default "F").
                          "auto": Werte > 45 werden als Fahrenheit interpretiert.
 SENSORS_DB               Pfad zur SQLite-Datei (Default: $BUFFET_DATA/sensors.db).
 """
@@ -37,8 +38,9 @@ from __future__ import annotations
 import asyncio
 import os
 import sqlite3
+import time
 import uuid
-from datetime import datetime, time as time_cls, timedelta, timezone
+from datetime import datetime, time as time_cls, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -58,6 +60,9 @@ STATE_URL = f"{GOVEE_BASE}/router/api/v1/device/state"
 
 API_KEY = os.getenv("GOVEE_API_KEY", "").strip()
 POLL_INTERVAL_SEC = int(os.getenv("GOVEE_POLL_INTERVAL_SEC", "120"))
+# Geräteliste nur alle 30 min neu holen (schont die API im 24/7-Dauerbetrieb).
+DEVICE_REFRESH_SEC = int(os.getenv("GOVEE_DEVICE_REFRESH_SEC", "1800"))
+# Kontroll-Fenster: nur für die "Kontrolle 7-10 Uhr"-Ansicht – Aufzeichnung läuft 24/7.
 WINDOW_START = os.getenv("GOVEE_WINDOW_START", "07:00")
 WINDOW_END = os.getenv("GOVEE_WINDOW_END", "10:00")
 TZ_NAME = os.getenv("GOVEE_TZ", "Europe/Berlin")
@@ -340,7 +345,7 @@ def query_day_summary(day: str) -> list[dict]:
 # ── Poller (Hintergrund-Task) ─────────────────────────────────────────────────
 
 class SensorPoller:
-    """Fragt die Govee-API im Zeitfenster zyklisch ab und speichert Werte."""
+    """Fragt die Govee-API 24/7 zyklisch ab und speichert die Werte."""
 
     def __init__(self):
         self.client = GoveeClient(API_KEY) if is_configured() else None
@@ -348,6 +353,8 @@ class SensorPoller:
         self.last_result: str = "noch nicht gelaufen"
         self.last_error: Optional[str] = None
         self.last_device_count: int = 0
+        self._devices_cache: Optional[list] = None
+        self._devices_cached_at: float = 0.0
         self._task: Optional[asyncio.Task] = None
         self._stop = asyncio.Event()
 
@@ -358,6 +365,7 @@ class SensorPoller:
         return {
             "configured": is_configured(),
             "running": self._task is not None and not self._task.done(),
+            "record_mode": "24/7",
             "in_window": in_window(now),
             "window": f"{WINDOW_START}–{WINDOW_END}",
             "timezone": TZ_NAME,
@@ -371,6 +379,15 @@ class SensorPoller:
             "db_path": str(DB_PATH),
         }
 
+    # -- Geräteliste (gecacht, alle 30 min neu) --------------------------------
+    async def _get_devices(self) -> list:
+        now = time.monotonic()
+        if (self._devices_cache is None
+                or now - self._devices_cached_at > DEVICE_REFRESH_SEC):
+            self._devices_cache = await self.client.list_devices()
+            self._devices_cached_at = now
+        return self._devices_cache
+
     # -- ein einzelner Mess-Durchlauf ------------------------------------------
     async def poll_once(self) -> int:
         """Liest alle Klima-Sensoren und speichert deren Werte. Gibt Anzahl zurück."""
@@ -383,7 +400,7 @@ class SensorPoller:
         ts_local = now.isoformat(timespec="seconds")
         day = now.strftime("%Y-%m-%d")
 
-        devices = await self.client.list_devices()
+        devices = await self._get_devices()
         climate = [d for d in devices if has_climate_caps(d)]
         self.last_device_count = len(climate)
 
@@ -411,31 +428,24 @@ class SensorPoller:
         self.last_poll_utc = ts_utc
         return stored
 
-    # -- Dauerschleife ---------------------------------------------------------
+    # -- Dauerschleife (24/7-Aufzeichnung) -------------------------------------
     async def _run(self) -> None:
         await asyncio.to_thread(init_db)
-        print(f"[govee] Poller gestartet · Fenster {WINDOW_START}–{WINDOW_END} "
-              f"({TZ_NAME}) · Intervall {POLL_INTERVAL_SEC}s · DB {DB_PATH}")
+        print(f"[govee] Poller gestartet · 24/7-Aufzeichnung · "
+              f"Intervall {POLL_INTERVAL_SEC}s · DB {DB_PATH}")
         while not self._stop.is_set():
-            tz = _tz()
-            now = datetime.now(tz)
-            if in_window(now):
-                try:
-                    n = await self.poll_once()
-                    self.last_result = f"ok – {n} Sensor(en) gespeichert"
-                    self.last_error = None
-                    print(f"[govee] {now:%H:%M:%S} – {n} Sensor(en) gespeichert")
-                except Exception as e:
-                    self.last_result = "Fehler"
-                    self.last_error = str(e)
-                    print(f"[govee] Poll-Fehler: {e}")
-                sleep_for = POLL_INTERVAL_SEC
-            else:
-                # Außerhalb des Fensters: bis kurz vor Fensterbeginn schlafen,
-                # höchstens aber 10 Minuten (robust gegen Uhr-/Restart-Effekte).
-                sleep_for = min(_seconds_to_next_window(now), 600)
+            now = datetime.now(_tz())
             try:
-                await asyncio.wait_for(self._stop.wait(), timeout=sleep_for)
+                n = await self.poll_once()
+                self.last_result = f"ok – {n} Sensor(en) gespeichert"
+                self.last_error = None
+                print(f"[govee] {now:%Y-%m-%d %H:%M:%S} – {n} Sensor(en) gespeichert")
+            except Exception as e:
+                self.last_result = "Fehler"
+                self.last_error = str(e)
+                print(f"[govee] Poll-Fehler: {e}")
+            try:
+                await asyncio.wait_for(self._stop.wait(), timeout=POLL_INTERVAL_SEC)
             except asyncio.TimeoutError:
                 pass
 
@@ -453,13 +463,3 @@ class SensorPoller:
                 await asyncio.wait_for(self._task, timeout=5.0)
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 self._task.cancel()
-
-
-def _seconds_to_next_window(now_local: datetime) -> float:
-    """Sekunden bis zum nächsten Fensterbeginn (heute oder morgen)."""
-    today_start = now_local.replace(
-        hour=WINDOW_START_T.hour, minute=WINDOW_START_T.minute,
-        second=0, microsecond=0,
-    )
-    target = today_start if now_local < today_start else today_start + timedelta(days=1)
-    return max(1.0, (target - now_local).total_seconds())

@@ -12,8 +12,10 @@ const PALETTE = ["#1A8C96", "#e07b39", "#5b8def", "#9b59b6", "#2e7d32",
 
 const state = {
   day: null,            // YYYY-MM-DD
-  windowStart: 7,       // Stunde
-  windowEnd: 10,
+  mode: "full",         // "full" = 24 Stunden | "control" = Kontrolle 7-10 Uhr
+  windowStart: 7,       // Kontroll-Fenster Beginn (Stunde)
+  windowEnd: 10,        // Kontroll-Fenster Ende (Stunde)
+  readings: [],         // Messwerte des aktuell geladenen Tages
   deviceColors: {},     // device-id → Farbe
 };
 
@@ -63,13 +65,13 @@ async function loadStatus() {
     if (m) {
       state.windowStart = parseInt(m[1], 10);
       state.windowEnd = parseInt(m[2], 10);
+      document.getElementById("modeControl").textContent = `🔍 Kontrolle ${state.windowStart}–${state.windowEnd} Uhr`;
     }
-    document.getElementById("windowPill").textContent = `Aufzeichnung ${s.window || "07:00–10:00"} Uhr`;
 
     if (!s.configured) {
       banner.innerHTML = "⚠️ <b>Kein API-Key gesetzt.</b> Setze die Umgebungsvariable " +
         "<code>GOVEE_API_KEY</code> auf dem Server, dann beginnt die Aufzeichnung " +
-        "automatisch im Zeitfenster.";
+        "automatisch (24/7).";
       banner.classList.add("show");
     } else if (s.last_error) {
       banner.innerHTML = `⚠️ Letzter Abruf-Fehler: <code>${s.last_error}</code>`;
@@ -117,7 +119,9 @@ async function loadLatest() {
 
 // ── Diagramme ─────────────────────────────────────────────────────────────────
 
-function buildChart(canvasId, label, unit, datasets) {
+function buildChart(canvasId, label, unit, datasets, hMin, hMax) {
+  const span = hMax - hMin;
+  const stepSize = span <= 4 ? 0.5 : (span <= 12 ? 1 : 2);
   const ctx = document.getElementById(canvasId).getContext("2d");
   return new Chart(ctx, {
     type: "line",
@@ -129,11 +133,13 @@ function buildChart(canvasId, label, unit, datasets) {
       scales: {
         x: {
           type: "linear",
-          min: state.windowStart,
-          max: state.windowEnd,
+          min: hMin,
+          max: hMax,
           title: { display: true, text: "Uhrzeit" },
           ticks: {
-            stepSize: 0.5,
+            stepSize: stepSize,
+            maxRotation: 0,
+            autoSkip: true,
             callback: (v) => {
               const h = Math.floor(v);
               const m = Math.round((v - h) * 60);
@@ -171,13 +177,15 @@ function datasetsFor(readings, field) {
   let i = 0;
   return Object.entries(byDevice).map(([device, info]) => {
     const color = colorFor(device, i++);
+    const data = info.points.filter((p) => p.y !== null && p.y !== undefined);
     return {
       label: info.name,
-      data: info.points.filter((p) => p.y !== null && p.y !== undefined),
+      data,
       borderColor: color,
       backgroundColor: color + "33",
       tension: 0.3,
-      pointRadius: 2,
+      pointRadius: data.length > 150 ? 0 : 2,
+      borderWidth: 2,
       spanGaps: true,
     };
   });
@@ -193,26 +201,60 @@ async function loadDay() {
   } catch (e) {
     return;
   }
-  const readings = data.readings || [];
-  const hasData = readings.length > 0;
+  state.readings = data.readings || [];
+  renderView();
+}
+
+// Zeichnet Charts + Zusammenfassung je nach gewählter Ansicht (24 h oder 7–10 Uhr)
+function renderView() {
+  const [hMin, hMax] = state.mode === "control"
+    ? [state.windowStart, state.windowEnd]
+    : [0, 24];
+  const inRange = (state.readings || []).filter((r) => {
+    const h = decimalHour(r.ts_local);
+    return h >= hMin && h < hMax;
+  });
+  const hasData = inRange.length > 0;
 
   // Feuchte nur anzeigen, wenn mindestens ein Sensor Feuchte-Werte liefert
-  const hasHum = readings.some((r) => r.humidity !== null && r.humidity !== undefined);
+  const hasHum = inRange.some((r) => r.humidity !== null && r.humidity !== undefined);
   document.body.classList.toggle("no-humidity", !hasHum);
 
-  // Charts
   if (typeof Chart === "undefined") return;  // CDN noch nicht geladen
   document.getElementById("tempEmpty").style.display = hasData ? "none" : "flex";
   document.getElementById("humEmpty").style.display = hasData ? "none" : "flex";
 
   if (tempChart) tempChart.destroy();
   if (humChart) { humChart.destroy(); humChart = null; }
-  tempChart = buildChart("tempChart", "Temperatur", "°C", datasetsFor(readings, "temp_c"));
+  tempChart = buildChart("tempChart", "Temperatur", "°C", datasetsFor(inRange, "temp_c"), hMin, hMax);
   if (hasHum) {
-    humChart = buildChart("humChart", "Luftfeuchte", "%", datasetsFor(readings, "humidity"));
+    humChart = buildChart("humChart", "Luftfeuchte", "%", datasetsFor(inRange, "humidity"), hMin, hMax);
   }
 
-  renderSummary(data.summary || []);
+  renderSummary(computeSummary(inRange));
+}
+
+// Min/Max/Mittel je Gerät aus den (gefilterten) Messwerten berechnen
+function computeSummary(readings) {
+  const by = {};
+  readings.forEach((r) => {
+    const g = by[r.device] || (by[r.device] =
+      { device: r.device, sku: r.sku, name: r.name || r.device, temps: [], hums: [] });
+    if (r.temp_c !== null && r.temp_c !== undefined) g.temps.push(r.temp_c);
+    if (r.humidity !== null && r.humidity !== undefined) g.hums.push(r.humidity);
+  });
+  const stat = (arr) => arr.length
+    ? { min: Math.min(...arr), max: Math.max(...arr), avg: arr.reduce((a, b) => a + b, 0) / arr.length }
+    : { min: null, max: null, avg: null };
+  return Object.values(by).map((g) => {
+    const t = stat(g.temps), h = stat(g.hums);
+    return {
+      device: g.device, name: g.name, sku: g.sku,
+      n: Math.max(g.temps.length, g.hums.length),
+      temp_avg: t.avg, temp_min: t.min, temp_max: t.max,
+      hum_avg: h.avg, hum_min: h.min, hum_max: h.max,
+    };
+  }).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 }
 
 function renderSummary(summary) {
@@ -245,6 +287,14 @@ function shiftDay(deltaDays) {
   loadDay();
 }
 
+// Ansicht umschalten (ohne Neuladen der Daten) – nur eine Ansicht aktiv
+function setMode(mode) {
+  state.mode = mode;
+  document.getElementById("modeFull").classList.toggle("active", mode === "full");
+  document.getElementById("modeControl").classList.toggle("active", mode === "control");
+  renderView();
+}
+
 function wireControls() {
   document.getElementById("prevDay").onclick = () => shiftDay(-1);
   document.getElementById("nextDay").onclick = () => shiftDay(1);
@@ -252,6 +302,8 @@ function wireControls() {
   document.getElementById("dayPicker").onchange = (e) => {
     if (e.target.value) { state.day = e.target.value; loadDay(); }
   };
+  document.getElementById("modeFull").onclick = () => setMode("full");
+  document.getElementById("modeControl").onclick = () => setMode("control");
 }
 
 // ── Auto-Refresh (nur wenn „heute" angezeigt wird) ────────────────────────────

@@ -50,6 +50,25 @@
   }
   .nav-btn:hover { background: var(--teal); color: var(--white); }
 
+  /* Umschalter 24 Stunden / Kontrolle 7-10 Uhr */
+  .mode-switch {
+    display: inline-flex;
+    border: 1px solid var(--teal-dark);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .mode-btn {
+    background: var(--white);
+    color: var(--teal-dark);
+    border: none;
+    border-radius: 0;
+    padding: 8px 16px;
+    font-weight: 600;
+  }
+  .mode-btn + .mode-btn { border-left: 1px solid var(--teal-dark); }
+  .mode-btn.active { background: var(--teal); color: var(--white); }
+  .mode-btn:hover:not(.active) { background: var(--teal-light); }
+
   .banner {
     background: #fff4e5;
     border: 1px solid #e0a96d;
@@ -152,9 +171,6 @@
         <span class="subtitle">Hotel Aquarius · Norddeich</span>
       </div>
     </div>
-    <div class="header-actions">
-      <a class="lang-btn" href="/">← Tagesbuffet</a>
-    </div>
   </div>
 </header>
 
@@ -174,8 +190,12 @@
     <input type="date" id="dayPicker">
     <button class="nav-btn" id="nextDay">▶</button>
     <button class="nav-btn" id="todayBtn">Heute</button>
+    <span class="window-pill" id="recPill">🟢 Aufzeichnung 24/7</span>
     <span class="spacer"></span>
-    <span class="window-pill" id="windowPill">Aufzeichnung 07:00–10:00 Uhr</span>
+    <div class="mode-switch">
+      <button class="mode-btn active" id="modeFull">🕐 24 Stunden</button>
+      <button class="mode-btn" id="modeControl">🔍 Kontrolle 7–10 Uhr</button>
+    </div>
   </div>
 
   <!-- Diagramme -->

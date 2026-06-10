@@ -3,8 +3,9 @@
 Live-Anzeige + tägliche Aufzeichnung der Govee-Temperatur-/Feuchte-Sensoren
 (Smart Thermometer R1 / **H5108** über das WLAN-Gateway **H5151**).
 
-* **Aufzeichnung nur 07:00–10:00 Uhr** (Europe/Berlin)
-* **Alle Tageswerte** landen in `data/sensors.db` (SQLite)
+* **Aufzeichnung 24/7** (rund um die Uhr, Zeitstempel in Europe/Berlin)
+* Zwei umschaltbare Ansichten: **24 Stunden** und **Kontrolle 7–10 Uhr** (nicht gleichzeitig)
+* **Alle Werte** landen in `data/sensors.db` (SQLite)
 * Dashboard unter **`/sensoren`**, grafisch aufbereitet (Chart.js)
 
 ---
@@ -80,9 +81,10 @@ Sie liegt im Daten-Ordner (nicht in Git) und überlebt Deploys.
 | Variable | Default | Zweck |
 |----------|---------|-------|
 | `GOVEE_API_KEY` | – | **Pflicht.** Ohne Key bleibt der Poller aus. |
-| `GOVEE_WINDOW_START` | `07:00` | Beginn der Aufzeichnung |
-| `GOVEE_WINDOW_END` | `10:00` | Ende der Aufzeichnung |
-| `GOVEE_POLL_INTERVAL_SEC` | `120` | Abstand zwischen Messungen |
+| `GOVEE_WINDOW_START` | `07:00` | Beginn der Kontroll-Ansicht (nur Anzeige) |
+| `GOVEE_WINDOW_END` | `10:00` | Ende der Kontroll-Ansicht (nur Anzeige) |
+| `GOVEE_POLL_INTERVAL_SEC` | `120` | Abstand zwischen Messungen (24/7) |
+| `GOVEE_DEVICE_REFRESH_SEC` | `1800` | Geräteliste neu laden (Cache, Sek.) |
 | `GOVEE_TZ` | `Europe/Berlin` | Zeitzone fürs Fenster |
 | `GOVEE_TEMP_INPUT_UNIT` | `F` | `F`/`C`/`auto` – Einheit der API-Werte |
 | `SENSORS_DB` | `$BUFFET_DATA/sensors.db` | Pfad zur Datenbank |
