@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sensoren · Hotel Aquarius</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<style>
+  /* Sensor-Dashboard – ergänzt das Aquarius-Teal-Schema aus style.css */
+  main.dash {
+    display: block;
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 24px;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .toolbar .spacer { flex: 1; }
+  .window-pill {
+    background: var(--teal-light);
+    color: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-weight: 600;
+    font-size: 0.9em;
+  }
+  .nav-btn {
+    background: var(--teal-light);
+    color: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+  }
+  .nav-btn:hover { background: var(--teal); color: var(--white); }
+
+  .banner {
+    background: #fff4e5;
+    border: 1px solid #e0a96d;
+    color: #8a5a1c;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    display: none;
+  }
+  .banner.show { display: block; }
+  .banner code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 3px; }
+
+  /* Live-Kacheln */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .tile {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    border-top: 4px solid var(--teal);
+  }
+  .tile .name {
+    font-weight: 700;
+    color: var(--teal-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gray); display:inline-block; }
+  .dot.online { background: var(--success); }
+  .dot.offline { background: var(--error); }
+  .readout { display: flex; gap: 20px; align-items: baseline; }
+  .readout .temp { font-size: 2.2em; font-weight: 700; color: var(--text); }
+  .readout .hum  { font-size: 1.3em; color: var(--teal-dark); }
+  .readout .unit { font-size: 0.5em; color: var(--gray); font-weight: 400; }
+  .tile .meta { font-size: 0.8em; color: var(--gray); margin-top: 10px; }
+
+  /* Diagramme */
+  .chart-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px 8px;
+    box-shadow: var(--shadow);
+    margin-bottom: 22px;
+  }
+  .chart-card h2 {
+    margin: 0 0 10px;
+    color: var(--teal-dark);
+    font-size: 1.15em;
+  }
+  .chart-wrap { position: relative; height: 320px; }
+  .chart-empty {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gray); font-size: 1.05em; text-align: center; padding: 20px;
+  }
+
+  /* Zusammenfassung */
+  table.summary {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  table.summary th, table.summary td {
+    padding: 10px 14px;
+    text-align: right;
+    border-bottom: 1px solid var(--teal-light);
+    font-size: 0.95em;
+  }
+  table.summary th { background: var(--teal-light); color: var(--teal-dark); font-weight: 700; }
+  table.summary td:first-child, table.summary th:first-child { text-align: left; }
+  table.summary tr:last-child td { border-bottom: none; }
+  .swatch { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:8px; vertical-align: middle; }
+
+  .section-title { color: var(--teal-dark); font-size: 1.1em; margin: 0 0 12px; }
+
+  /* Sensoren ohne Feuchte-Wert (z. B. Smart Thermometer R1): Feuchte-UI ausblenden */
+  body.no-humidity .hum-col { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <h1>🌡️ Sensoren</h1>
+      <span class="subtitle">Hotel Aquarius · Norddeich</span>
+    </div>
+    <div class="header-actions">
+      <a class="lang-btn" href="/">← Tagesbuffet</a>
+    </div>
+  </div>
+</header>
+
+<main class="dash">
+
+  <div id="banner" class="banner"></div>
+
+  <!-- Live-Werte -->
+  <h2 class="section-title">Aktuelle Werte</h2>
+  <div id="tiles" class="tiles">
+    <div class="tile"><div class="meta">Lade …</div></div>
+  </div>
+
+  <!-- Steuerung -->
+  <div class="toolbar">
+    <button class="nav-btn" id="prevDay">◀</button>
+    <input type="date" id="dayPicker">
+    <button class="nav-btn" id="nextDay">▶</button>
+    <button class="nav-btn" id="todayBtn">Heute</button>
+    <span class="spacer"></span>
+    <span class="window-pill" id="windowPill">Aufzeichnung 07:00–10:00 Uhr</span>
+  </div>
+
+  <!-- Diagramme -->
+  <div class="chart-card">
+    <h2>Temperatur (°C)</h2>
+    <div class="chart-wrap">
+      <canvas id="tempChart"></canvas>
+      <div class="chart-empty" id="tempEmpty">Keine Daten für diesen Tag.</div>
+    </div>
+  </div>
+
+  <div class="chart-card hum-col" id="humCard">
+    <h2>Luftfeuchte (%)</h2>
+    <div class="chart-wrap">
+      <canvas id="humChart"></canvas>
+      <div class="chart-empty" id="humEmpty">Keine Daten für diesen Tag.</div>
+    </div>
+  </div>
+
+  <!-- Tages-Zusammenfassung -->
+  <h2 class="section-title">Tages-Zusammenfassung</h2>
+  <table class="summary" id="summaryTable">
+    <thead>
+      <tr>
+        <th>Sensor</th>
+        <th>Temp Ø</th><th>Temp min</th><th>Temp max</th>
+        <th class="hum-col">Feuchte Ø</th><th class="hum-col">Feuchte min</th><th class="hum-col">Feuchte max</th>
+        <th>Messungen</th>
+      </tr>
+    </thead>
+    <tbody><tr><td colspan="8">Lade …</td></tr></tbody>
+  </table>
+
+</main>
+
+<script src="/static/sensoren.js" defer></script>
+</body>
+</html>

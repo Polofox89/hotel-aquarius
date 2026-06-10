@@ -1,6 +1,9 @@
 # Generierte Inhalte (Bilder, Excel-Archiv, History, Vorschläge, Settings)
 buffet/
 
+# Govee-Sensor-Datenbank (wächst täglich – gehört nicht in Git)
+data/sensors.db*
+
 # Lokale Backups
 backups/
 

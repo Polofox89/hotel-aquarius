@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 import json
+import asyncio
 from datetime import datetime, date as date_cls
 from io import BytesIO
 from pathlib import Path
@@ -41,6 +42,7 @@ from buffet_core import (
     DEFAULT_SUGGESTIONS,
     ANTHROPIC_OK,
 )
+import govee_sensors as gs
 
 
 # ── Pfade ─────────────────────────────────────────────────────────────────────
@@ -97,6 +99,24 @@ app.add_middleware(
 STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+# ── Govee-Sensor-Poller (Hintergrund) ──────────────────────────────────────────
+
+sensor_poller = gs.SensorPoller()
+
+
+@app.on_event("startup")
+async def _start_sensor_poller():
+    """Startet den Govee-Poller (nur aktiv, wenn GOVEE_API_KEY gesetzt ist)."""
+    # DB immer anlegen, damit die Abfrage-Endpunkte auch ohne Poller funktionieren.
+    await asyncio.to_thread(gs.init_db)
+    sensor_poller.start()
+
+
+@app.on_event("shutdown")
+async def _stop_sensor_poller():
+    await sensor_poller.stop()
 
 
 # ── Routen: Frontend ──────────────────────────────────────────────────────────
@@ -461,6 +481,90 @@ def _add_to_history(d: datetime, menu: dict) -> None:
 async def get_history(limit: int = 7):
     """Letzte gespeicherte Menüs (default 7 Tage)."""
     return _read_history()[:max(1, min(limit, 30))]
+
+
+# ── Routen: Sensor-Dashboard ────────────────────────────────────────────────
+
+@app.get("/sensoren", response_class=HTMLResponse)
+async def sensoren():
+    """Govee-Sensor-Dashboard (Temperatur + Luftfeuchte, 07–10 Uhr)."""
+    html_path = STATIC_DIR / "sensoren.html"
+    if not html_path.exists():
+        return HTMLResponse("<h1>sensoren.html fehlt.</h1>", status_code=200)
+    html = html_path.read_text(encoding="utf-8")
+    for fn in ("style.css", "sensoren.js"):
+        html = html.replace(
+            f"/static/{fn}", f"/static/{fn}?v={_asset_version(fn)}"
+        )
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/sensors/status")
+async def sensors_status():
+    """Status des Pollers + Konfiguration (für das Dashboard)."""
+    return sensor_poller.status()
+
+
+@app.get("/api/sensors/devices")
+async def sensors_devices():
+    """Bekannte Sensoren (aus der Datenbank)."""
+    return await asyncio.to_thread(gs.query_devices)
+
+
+@app.get("/api/sensors/latest")
+async def sensors_latest():
+    """Jeweils neuester Messwert pro Sensor."""
+    return await asyncio.to_thread(gs.query_latest_per_device)
+
+
+@app.get("/api/sensors/days")
+async def sensors_days():
+    """Alle Tage mit aufgezeichneten Werten (neueste zuerst)."""
+    return await asyncio.to_thread(gs.query_days)
+
+
+@app.get("/api/sensors/history")
+async def sensors_history(day: Optional[str] = None, device: Optional[str] = None):
+    """Messwerte eines Tages (Default: heute, Europe/Berlin) – optional je Gerät."""
+    if not day:
+        day = datetime.now(gs._tz()).strftime("%Y-%m-%d")
+    readings = await asyncio.to_thread(gs.query_history, day, device)
+    summary = await asyncio.to_thread(gs.query_day_summary, day)
+    return {"day": day, "window": f"{gs.WINDOW_START}–{gs.WINDOW_END}",
+            "readings": readings, "summary": summary}
+
+
+@app.get("/api/sensors/probe")
+async def sensors_probe():
+    """Live-Test gegen die Govee-API: zeigt sichtbare Geräte + aktuelle Werte.
+    Nützlich zur Erstkontrolle direkt im Browser (macht echte API-Calls)."""
+    if not gs.is_configured():
+        raise HTTPException(503, "GOVEE_API_KEY nicht gesetzt.")
+    client = gs.GoveeClient(gs.API_KEY)
+    try:
+        devices = await client.list_devices()
+    except Exception as e:
+        raise HTTPException(502, f"Govee-API-Fehler: {e}")
+    result = []
+    for d in devices:
+        is_climate = gs.has_climate_caps(d)
+        entry = {
+            "name": d.get("deviceName") or d.get("sku"),
+            "sku": d.get("sku"),
+            "type": d.get("type"),
+            "climate": is_climate,
+            "capabilities": [c.get("instance") for c in d.get("capabilities", []) or []],
+        }
+        if is_climate:
+            try:
+                payload = await client.get_device_state(d.get("sku", ""), d.get("device", ""))
+                entry["values"] = gs.extract_values(payload)
+            except Exception as e:
+                entry["values"] = {"error": str(e)}
+        result.append(entry)
+    return {"device_count": len(devices),
+            "climate_count": sum(1 for r in result if r["climate"]),
+            "devices": result}
 
 
 # ── Lokaler Start ─────────────────────────────────────────────────────────────

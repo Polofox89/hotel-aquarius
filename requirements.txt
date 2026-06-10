@@ -1,0 +1,22 @@
+# Hotel Aquarius – Python-Abhängigkeiten
+# Installation:  pip install -r requirements.txt
+
+# Web-Backend (Tagesbuffet + Sensor-Dashboard)
+fastapi
+uvicorn[standard]
+pydantic
+
+# Bildgenerierung Tagesbuffet
+pillow
+
+# Excel-Archiv
+openpyxl
+
+# KI-Analyse (optional – /api/analyze)
+anthropic
+
+# Govee-Sensor-Dashboard: HTTP-Client für die Govee-Cloud-API
+httpx
+
+# Zeitzonen-Daten (Europe/Berlin) – nötig für zoneinfo unter Windows
+tzdata
