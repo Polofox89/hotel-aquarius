@@ -66,6 +66,7 @@ DEVICE_REFRESH_SEC = int(os.getenv("TUYA_DEVICE_REFRESH_SEC", "1800"))
 TEMP_CODES = {"va_temperature", "temp_current", "temperature", "temp_current_external"}
 HUM_CODES = {"va_humidity", "humidity_value", "humidity", "va_humidity_external"}
 ONLINE_CODES = {"online"}
+BATTERY_CODES = {"battery_percentage", "battery_value", "va_battery", "residual_electricity"}
 # Geräte-Kategorien, die wir als Klima-Sensor behandeln
 CLIMATE_CATEGORIES = {"wsdcg", "wnykq", "ldcg"}
 
@@ -137,6 +138,7 @@ def extract_values(status: list[dict]) -> dict:
     temp_raw: Optional[float] = None
     humidity: Optional[float] = None
     online: Optional[bool] = None
+    battery: Optional[float] = None
     for item in status or []:
         code = item.get("code")
         value = item.get("value")
@@ -144,12 +146,15 @@ def extract_values(status: list[dict]) -> dict:
             temp_raw = _num(value)
         elif code in HUM_CODES:
             humidity = _num(value)
+        elif code in BATTERY_CODES:
+            battery = _num(value)
         elif code in ONLINE_CODES:
             online = bool(value)
     return {
         "temp_raw": temp_raw,
         "temp_c": to_celsius(temp_raw),
         "humidity": humidity,
+        "battery": battery,
         "online": online,
     }
 
@@ -273,7 +278,7 @@ class TuyaPoller:
                 device=device_id, sku="TH02 Pro", name=name,
                 temp_c=vals["temp_c"], temp_raw=vals["temp_raw"],
                 humidity=vals["humidity"], online=vals["online"],
-                source="tuya",
+                source="tuya", battery=vals.get("battery"),
             )
             stored += 1
         self.last_poll_utc = ts_utc

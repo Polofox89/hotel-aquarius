@@ -239,14 +239,17 @@ def init_db() -> None:
                 temp_raw  REAL,
                 humidity  REAL,
                 online    INTEGER,
-                source    TEXT DEFAULT 'govee'
+                source    TEXT DEFAULT 'govee',
+                battery   REAL
             )
             """
         )
-        # Migration: source-Spalte für bestehende DBs ohne diese Spalte ergänzen
+        # Migrationen: fehlende Spalten für bestehende DBs ergänzen (idempotent)
         cols = [r[1] for r in conn.execute("PRAGMA table_info(readings)").fetchall()]
         if "source" not in cols:
             conn.execute("ALTER TABLE readings ADD COLUMN source TEXT DEFAULT 'govee'")
+        if "battery" not in cols:
+            conn.execute("ALTER TABLE readings ADD COLUMN battery REAL")
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_readings_day_device "
             "ON readings(day, device)"
@@ -262,18 +265,19 @@ def insert_reading(
     *, ts_utc: str, ts_local: str, day: str, device: str, sku: str,
     name: str, temp_c: Optional[float], temp_raw: Optional[float],
     humidity: Optional[float], online: Optional[bool], source: str = "govee",
+    battery: Optional[float] = None,
 ) -> None:
     with _connect() as conn:
         conn.execute(
             """
             INSERT INTO readings
               (ts_utc, ts_local, day, device, sku, name,
-               temp_c, temp_raw, humidity, online, source)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               temp_c, temp_raw, humidity, online, source, battery)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (ts_utc, ts_local, day, device, sku, name,
              temp_c, temp_raw, humidity,
-             None if online is None else int(online), source),
+             None if online is None else int(online), source, battery),
         )
         conn.commit()
 

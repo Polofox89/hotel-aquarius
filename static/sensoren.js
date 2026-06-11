@@ -112,6 +112,7 @@ async function loadLatest() {
           <span class="temp">${fmt(r.temp_c)}<span class="unit"> °C</span></span>
           ${r.humidity != null ? `<span class="hum">${fmt(r.humidity, 0)}<span class="unit"> % rF</span></span>` : ""}
         </div>
+        ${r.battery != null ? `<div class="battery${r.battery <= 20 ? " low" : ""}">🔋 ${fmt(r.battery, 0)} %</div>` : ""}
         <div class="meta">Letzte Messung: ${when}</div>
       </div>`;
   }).join("");
