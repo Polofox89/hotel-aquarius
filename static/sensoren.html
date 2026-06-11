@@ -194,6 +194,7 @@
     <button class="nav-btn" id="todayBtn">Heute</button>
     <span class="window-pill" id="recPill">🟢 Aufzeichnung 24/7</span>
     <span class="spacer"></span>
+    <button class="nav-btn" id="showAllBtn">👁 Alle anzeigen</button>
     <div class="mode-switch">
       <button class="mode-btn active" id="modeFull">🕐 24 Stunden</button>
       <button class="mode-btn" id="modeControl">🔍 Kontrolle 7–10 Uhr</button>
@@ -217,8 +218,8 @@
     </div>
   </div>
 
-  <!-- Tages-Zusammenfassung -->
-  <h2 class="section-title">Tages-Zusammenfassung</h2>
+  <!-- Zusammenfassung (Titel wechselt je nach Ansicht) -->
+  <h2 class="section-title" id="summaryTitle">Tages-Zusammenfassung</h2>
   <table class="summary" id="summaryTable">
     <thead>
       <tr>

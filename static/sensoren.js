@@ -258,6 +258,9 @@ function renderView() {
     humChart = null;
   }
 
+  // Überschrift der Zusammenfassung an die Ansicht anpassen
+  document.getElementById("summaryTitle").textContent =
+    state.mode === "control" ? `Frühstückszeit (${hMin}–${hMax} Uhr)` : "Tages-Zusammenfassung";
   renderSummary(computeSummary(inRange));
 }
 
@@ -331,6 +334,16 @@ function wireControls() {
   };
   document.getElementById("modeFull").onclick = () => setMode("full");
   document.getElementById("modeControl").onclick = () => setMode("control");
+  document.getElementById("showAllBtn").onclick = showAllDatasets;
+}
+
+// Alle ausgeblendeten Sensoren in beiden Diagrammen wieder einblenden
+function showAllDatasets() {
+  [tempChart, humChart].forEach((ch) => {
+    if (!ch) return;
+    ch.data.datasets.forEach((ds, i) => ch.setDatasetVisibility(i, true));
+    ch.update("none");
+  });
 }
 
 // ── Auto-Refresh (nur wenn „heute" angezeigt wird) ────────────────────────────
