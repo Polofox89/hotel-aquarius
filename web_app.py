@@ -43,6 +43,7 @@ from buffet_core import (
     ANTHROPIC_OK,
 )
 import govee_sensors as gs
+import tuya_sensors as ts
 
 
 # ── Pfade ─────────────────────────────────────────────────────────────────────
@@ -104,19 +105,22 @@ if STATIC_DIR.exists():
 # ── Govee-Sensor-Poller (Hintergrund) ──────────────────────────────────────────
 
 sensor_poller = gs.SensorPoller()
+tuya_poller = ts.TuyaPoller()
 
 
 @app.on_event("startup")
 async def _start_sensor_poller():
-    """Startet den Govee-Poller (nur aktiv, wenn GOVEE_API_KEY gesetzt ist)."""
+    """Startet die Sensor-Poller (jeweils nur aktiv, wenn konfiguriert)."""
     # DB immer anlegen, damit die Abfrage-Endpunkte auch ohne Poller funktionieren.
     await asyncio.to_thread(gs.init_db)
-    sensor_poller.start()
+    sensor_poller.start()   # Govee  (GOVEE_API_KEY)
+    tuya_poller.start()     # Tuya / Comboss  (TUYA_ACCESS_ID/SECRET)
 
 
 @app.on_event("shutdown")
 async def _stop_sensor_poller():
     await sensor_poller.stop()
+    await tuya_poller.stop()
 
 
 # ── Routen: Frontend ──────────────────────────────────────────────────────────
@@ -565,6 +569,47 @@ async def sensors_probe():
     return {"device_count": len(devices),
             "climate_count": sum(1 for r in result if r["climate"]),
             "devices": result}
+
+
+@app.get("/api/sensors/tuya/status")
+async def sensors_tuya_status():
+    """Status des Tuya-/Comboss-Pollers + Konfiguration."""
+    return tuya_poller.status()
+
+
+@app.get("/api/sensors/tuya/probe")
+async def sensors_tuya_probe():
+    """Live-Test gegen die Tuya-Cloud: sichtbare Geräte + aktuelle Werte.
+    Zur Erstkontrolle, sobald Access ID/Secret gesetzt sind (echte API-Calls)."""
+    if not ts.is_configured():
+        raise HTTPException(
+            503,
+            "Tuya nicht konfiguriert – TUYA_ACCESS_ID/TUYA_ACCESS_SECRET fehlt"
+            + ("" if ts.TINYTUYA_OK else " (und tinytuya nicht installiert)") + "."
+        )
+    try:
+        client = ts.TuyaClient(ts.ACCESS_ID, ts.ACCESS_SECRET, ts.REGION,
+                               bootstrap_device_id=ts.DEVICE_IDS[0] if ts.DEVICE_IDS else "")
+        devices = await asyncio.to_thread(client.list_devices)
+    except Exception as e:
+        raise HTTPException(502, f"Tuya-API-Fehler: {e}")
+
+    result = []
+    targets = ts.DEVICE_IDS or [
+        (d.get("id") or d.get("device_id")) for d in devices if ts.is_climate_device(d)
+    ]
+    name_map = {(d.get("id") or d.get("device_id")):
+                (d.get("name") or d.get("product_name")) for d in devices}
+    for device_id in [t for t in targets if t]:
+        entry = {"device_id": device_id, "name": name_map.get(device_id)}
+        try:
+            status = await asyncio.to_thread(client.get_status, device_id)
+            entry["values"] = ts.extract_values(status)
+            entry["raw_status"] = status
+        except Exception as e:
+            entry["values"] = {"error": str(e)}
+        result.append(entry)
+    return {"device_count": len(devices), "polled": len(result), "devices": result}
 
 
 # ── Lokaler Start ─────────────────────────────────────────────────────────────

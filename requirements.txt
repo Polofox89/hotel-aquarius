@@ -18,5 +18,8 @@ anthropic
 # Govee-Sensor-Dashboard: HTTP-Client für die Govee-Cloud-API
 httpx
 
+# Tuya-/Comboss-Sensoren: Tuya-Cloud-Client (Smart Life / TH02 Pro)
+tinytuya
+
 # Zeitzonen-Daten (Europe/Berlin) – nötig für zoneinfo unter Windows
 tzdata
