@@ -168,6 +168,29 @@ function buildChart(canvasId, label, unit, datasets, hMin, hMax) {
   });
 }
 
+// Bestehendes Chart in-place aktualisieren (Achsenbereich + Daten) und dabei
+// den Legenden-Filter erhalten; existiert noch keins, neu anlegen.
+function upsertChart(chart, canvasId, label, unit, datasets, hMin, hMax) {
+  if (!chart) return buildChart(canvasId, label, unit, datasets, hMin, hMax);
+  // Ausgeblendete Sensoren je Name merken
+  const hidden = {};
+  chart.data.datasets.forEach((ds, i) => { hidden[ds.label] = !chart.isDatasetVisible(i); });
+  // Achsenbereich an den Modus anpassen (24 h ↔ 7–10 Uhr)
+  const span = hMax - hMin;
+  chart.options.scales.x.min = hMin;
+  chart.options.scales.x.max = hMax;
+  chart.options.scales.x.ticks.stepSize = span <= 4 ? 0.5 : (span <= 12 ? 1 : 2);
+  // Daten ersetzen, ohne Animation
+  chart.data.datasets = datasets;
+  chart.update("none");
+  // Filter (per Name) wieder anwenden
+  chart.data.datasets.forEach((ds, i) => {
+    if (hidden[ds.label]) chart.setDatasetVisibility(i, false);
+  });
+  chart.update("none");
+  return chart;
+}
+
 function datasetsFor(readings, field) {
   // Nach Gerät gruppieren
   const byDevice = {};
@@ -225,11 +248,14 @@ function renderView() {
   document.getElementById("tempEmpty").style.display = hasData ? "none" : "flex";
   document.getElementById("humEmpty").style.display = hasData ? "none" : "flex";
 
-  if (tempChart) tempChart.destroy();
-  if (humChart) { humChart.destroy(); humChart = null; }
-  tempChart = buildChart("tempChart", "Temperatur", "°C", datasetsFor(inRange, "temp_c"), hMin, hMax);
+  // Charts aktualisieren statt neu bauen → Legenden-Filter (ausgeblendete
+  // Sensoren) bleibt beim Auto-Refresh / Moduswechsel erhalten.
+  tempChart = upsertChart(tempChart, "tempChart", "Temperatur", "°C", datasetsFor(inRange, "temp_c"), hMin, hMax);
   if (hasHum) {
-    humChart = buildChart("humChart", "Luftfeuchte", "%", datasetsFor(inRange, "humidity"), hMin, hMax);
+    humChart = upsertChart(humChart, "humChart", "Luftfeuchte", "%", datasetsFor(inRange, "humidity"), hMin, hMax);
+  } else if (humChart) {
+    humChart.destroy();
+    humChart = null;
   }
 
   renderSummary(computeSummary(inRange));
