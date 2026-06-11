@@ -595,9 +595,12 @@ async def sensors_tuya_probe():
         raise HTTPException(502, f"Tuya-API-Fehler: {e}")
 
     result = []
-    targets = ts.DEVICE_IDS or [
-        (d.get("id") or d.get("device_id")) for d in devices if ts.is_climate_device(d)
-    ]
+    discovered = [(d.get("id") or d.get("device_id")) for d in devices if ts.is_climate_device(d)]
+    seen, targets = set(), []
+    for t in list(ts.DEVICE_IDS) + discovered:
+        if t and t not in seen:
+            seen.add(t)
+            targets.append(t)
     name_map = {(d.get("id") or d.get("device_id")):
                 (d.get("name") or d.get("product_name")) for d in devices}
     for device_id in [t for t in targets if t]:

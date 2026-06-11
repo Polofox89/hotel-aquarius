@@ -223,14 +223,19 @@ class TuyaPoller:
             if did:
                 self._name_map[did] = d.get("name") or d.get("product_name") or did
 
-        if DEVICE_IDS:
-            targets = DEVICE_IDS
-        else:
-            targets = [
-                (d.get("id") or d.get("device_id"))
-                for d in devices if is_climate_device(d)
-            ]
-            targets = [t for t in targets if t]
+        # Automatisch entdeckte Klima-Sensoren …
+        discovered = [
+            (d.get("id") or d.get("device_id"))
+            for d in devices if is_climate_device(d)
+        ]
+        # … vereint mit den explizit gesetzten IDs (eine genügt als "Einstieg"
+        # für die Geräteliste). Reihenfolge erhalten, Duplikate raus.
+        seen: set = set()
+        targets: list[str] = []
+        for t in list(DEVICE_IDS) + discovered:
+            if t and t not in seen:
+                seen.add(t)
+                targets.append(t)
 
         self._targets_cache = targets
         self._cached_at = now
