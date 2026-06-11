@@ -120,11 +120,40 @@ async function loadLatest() {
 
 // ── Diagramme ─────────────────────────────────────────────────────────────────
 
+// Rote horizontale Grenzlinie (z. B. 7 °C Kühlgrenze) – schlankes Chart.js-Plugin
+const thresholdLinePlugin = {
+  id: "thresholdLine",
+  afterDatasetsDraw(chart, args, opts) {
+    if (!opts || opts.value == null) return;
+    const yScale = chart.scales.y, area = chart.chartArea, ctx = chart.ctx;
+    if (!yScale || !area) return;
+    const yPix = yScale.getPixelForValue(opts.value);
+    if (yPix < area.top || yPix > area.bottom) return;  // außerhalb sichtbar → nicht zeichnen
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = opts.color || "#c62828";
+    ctx.moveTo(area.left, yPix);
+    ctx.lineTo(area.right, yPix);
+    ctx.stroke();
+    if (opts.label) {
+      ctx.setLineDash([]);
+      ctx.fillStyle = opts.color || "#c62828";
+      ctx.font = "12px 'Segoe UI', system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(opts.label, area.right - 6, yPix - 3);
+    }
+    ctx.restore();
+  },
+};
+
 function buildChart(canvasId, label, unit, datasets, hMin, hMax) {
   const span = hMax - hMin;
   const stepSize = span <= 4 ? 0.5 : (span <= 12 ? 1 : 2);
   const ctx = document.getElementById(canvasId).getContext("2d");
-  return new Chart(ctx, {
+  const config = {
     type: "line",
     data: { datasets },
     options: {
@@ -165,7 +194,13 @@ function buildChart(canvasId, label, unit, datasets, hMin, hMax) {
         },
       },
     },
-  });
+  };
+  // Rote Grenzlinie bei 7 °C – nur im Temperatur-Chart
+  if (unit === "°C") {
+    config.plugins = [thresholdLinePlugin];
+    config.options.plugins.thresholdLine = { value: 7, color: "#c62828", label: "Grenze 7 °C" };
+  }
+  return new Chart(ctx, config);
 }
 
 // Bestehendes Chart in-place aktualisieren (Achsenbereich + Daten) und dabei
