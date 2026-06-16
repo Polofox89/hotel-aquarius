@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotel Aquarius – Timer</title>
+  <meta name="description" content="Großflächiger Timer (analog & digital) für das Hotel Aquarius – sekundengenau einstellbar, Ping alle 30 Sekunden, Jingle bei Null.">
+  <link rel="stylesheet" href="css/timer.css">
+</head>
+<body>
+  <main class="app">
+    <h1 class="app__title">Hotel&nbsp;Aquarius&nbsp;– Timer</h1>
+
+    <!-- Timer-Anzeige: analog (SVG) + digital -->
+    <section class="timer" aria-label="Timer-Anzeige">
+      <div class="timer__clock">
+        <svg class="clock" viewBox="0 0 200 200" role="img" aria-hidden="true">
+          <!-- Hintergrundring -->
+          <circle class="clock__track" cx="100" cy="100" r="92"></circle>
+          <!-- Ablaufender Fortschrittsbogen (wird per JS gesteuert) -->
+          <circle class="clock__progress" cx="100" cy="100" r="92"></circle>
+          <!-- Minuten-/Sekundenmarkierungen -->
+          <g class="clock__ticks" id="clockTicks"></g>
+          <!-- Sweeping-Zeiger -->
+          <line class="clock__hand" id="clockHand" x1="100" y1="100" x2="100" y2="20"></line>
+          <circle class="clock__center" cx="100" cy="100" r="5"></circle>
+        </svg>
+
+        <!-- Digitale Anzeige liegt mittig im Zifferblatt -->
+        <div class="timer__digital" id="digital" role="timer" aria-live="off" aria-atomic="true">10:00</div>
+      </div>
+      <p class="timer__status" id="status" aria-live="polite">Bereit – 10 Minuten voreingestellt</p>
+    </section>
+
+    <!-- Bedienelemente -->
+    <section class="controls" aria-label="Steuerung">
+      <div class="controls__main">
+        <button class="btn btn--primary" id="startPause" type="button">Start</button>
+        <button class="btn" id="reset" type="button">Zurücksetzen</button>
+        <button class="btn" id="fullscreen" type="button" aria-pressed="false">Vollbild</button>
+        <button class="btn btn--toggle" id="mute" type="button" aria-pressed="false" title="Ton an/aus">🔊 Ton</button>
+      </div>
+
+      <!-- Sekundengenaue Einstellung -->
+      <fieldset class="setter" id="setter">
+        <legend>Zeit einstellen (sekundengenau)</legend>
+        <div class="setter__inputs">
+          <label class="setter__field">
+            <span>Stunden</span>
+            <input type="number" id="inHours" min="0" max="99" step="1" value="0" inputmode="numeric">
+          </label>
+          <label class="setter__field">
+            <span>Minuten</span>
+            <input type="number" id="inMinutes" min="0" max="59" step="1" value="10" inputmode="numeric">
+          </label>
+          <label class="setter__field">
+            <span>Sekunden</span>
+            <input type="number" id="inSeconds" min="0" max="59" step="1" value="0" inputmode="numeric">
+          </label>
+        </div>
+        <button class="btn btn--small" id="applyTime" type="button">Übernehmen</button>
+      </fieldset>
+
+      <!-- Schnellauswahl / Presets -->
+      <div class="presets" aria-label="Voreinstellungen">
+        <span class="presets__label">Presets:</span>
+        <button class="btn btn--small preset" data-seconds="60" type="button">1 Min</button>
+        <button class="btn btn--small preset" data-seconds="180" type="button">3 Min</button>
+        <button class="btn btn--small preset" data-seconds="300" type="button">5 Min</button>
+        <button class="btn btn--small preset preset--default" data-seconds="600" type="button">10 Min</button>
+        <button class="btn btn--small preset" data-seconds="900" type="button">15 Min</button>
+        <button class="btn btn--small preset" data-seconds="1800" type="button">30 Min</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/timer.js"></script>
+</body>
+</html>
