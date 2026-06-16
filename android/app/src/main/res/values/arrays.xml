@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Auswählbare Claude-Modelle -->
+    <string-array name="model_entries">
+        <item>Claude Opus 4.8 (leistungsstärkstes)</item>
+        <item>Claude Sonnet 4.6 (ausgewogen)</item>
+        <item>Claude Haiku 4.5 (schnell &amp; günstig)</item>
+    </string-array>
+    <string-array name="model_values">
+        <item>claude-opus-4-8</item>
+        <item>claude-sonnet-4-6</item>
+        <item>claude-haiku-4-5-20251001</item>
+    </string-array>
+
+    <!-- Betriebsmodi -->
+    <string-array name="mode_entries">
+        <item>Neuer Chat (Claude-API)</item>
+        <item>Claude-Code-Sitzung</item>
+        <item>Cowork</item>
+    </string-array>
+    <string-array name="mode_values">
+        <item>chat</item>
+        <item>claude_code</item>
+        <item>cowork</item>
+    </string-array>
+
+    <!-- Sprache der Spracherkennung -->
+    <string-array name="language_entries">
+        <item>Deutsch</item>
+        <item>English</item>
+    </string-array>
+    <string-array name="language_values">
+        <item>de-DE</item>
+        <item>en-US</item>
+    </string-array>
+
+</resources>
