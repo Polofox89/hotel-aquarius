@@ -1,0 +1,256 @@
+/* Hotel Aquarius – Timer
+   Großflächiger Timer (analog & digital). Mobile First, responsive.
+   Farbwelt: Nordsee-Blau/Türkis ("Aquarius"). */
+
+:root {
+  --bg: #0a2942;
+  --bg-soft: #103a5c;
+  --accent: #25c2c8;       /* Türkis */
+  --accent-warm: #f5a623;  /* Warnphase */
+  --danger: #e2483d;       /* Endphase */
+  --text: #eaf6f8;
+  --text-dim: #9fc0cf;
+  --track: rgba(255, 255, 255, 0.12);
+  --btn-bg: #19496e;
+  --btn-bg-hover: #1f5a87;
+  --focus: #ffd166;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 50% 0%, var(--bg-soft), var(--bg) 70%);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+.app {
+  width: 100%;
+  max-width: 720px;
+  padding: clamp(1rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2rem);
+}
+
+.app__title {
+  font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  margin: 0;
+  text-align: center;
+}
+
+/* ---------- Timer-Anzeige ---------- */
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.timer__clock {
+  position: relative;
+  width: min(80vw, 60vh, 460px);
+  aspect-ratio: 1 / 1;
+}
+
+.clock {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* 12-Uhr-Start für den Fortschrittsbogen */
+}
+
+.clock__track {
+  fill: none;
+  stroke: var(--track);
+  stroke-width: 8;
+}
+
+.clock__progress {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 8;
+  stroke-linecap: round;
+  /* Umfang 2πr (r=92) ≈ 578.05; per JS gesetzt */
+  transition: stroke 0.4s ease;
+}
+
+.clock__ticks line {
+  stroke: var(--text-dim);
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+.clock__ticks line.major {
+  stroke: var(--text);
+  stroke-width: 2.5;
+  opacity: 0.8;
+}
+
+.clock__hand {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform-origin: 100px 100px; /* Drehpunkt = Zifferblattmitte */
+  /* Drehung per JS (rAF) – keine CSS-Transition, damit kein Rückspul-Sprung bei 360°→0° */
+}
+
+.clock__center {
+  fill: var(--accent);
+  transform: rotate(90deg); /* gegensteuern, damit zentriert */
+  transform-origin: 100px 100px;
+}
+
+.timer__digital {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: clamp(2.5rem, 14vw, 6rem);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.timer__status {
+  margin: 0;
+  min-height: 1.4em;
+  color: var(--text-dim);
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  text-align: center;
+}
+
+/* Zustands-Farben (per JS-Klassen am <body>) */
+body.is-warn .clock__progress { stroke: var(--accent-warm); }
+body.is-warn .timer__digital { color: var(--accent-warm); }
+body.is-danger .clock__progress { stroke: var(--danger); }
+body.is-danger .timer__digital { color: var(--danger); }
+
+body.is-finished .timer__digital {
+  color: var(--danger);
+  animation: blink 0.7s steps(2, start) infinite;
+}
+@keyframes blink { to { opacity: 0.25; } }
+
+/* ---------- Controls ---------- */
+.controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.controls__main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--btn-bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.7rem 1.2rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+.btn:hover { background: var(--btn-bg-hover); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.btn--primary {
+  background: var(--accent);
+  color: #04222a;
+  border-color: transparent;
+}
+.btn--primary:hover { background: #36d3d9; }
+
+.btn--small { padding: 0.45rem 0.8rem; font-size: 0.9rem; }
+
+.btn--toggle[aria-pressed="true"] { opacity: 0.55; }
+
+/* Sekundengenaue Einstellung */
+.setter {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 1rem 1.2rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  align-items: center;
+}
+.setter legend {
+  padding: 0 0.5rem;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+.setter__inputs {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.setter__field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.setter__field input {
+  width: 5rem;
+  font: inherit;
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 0.4rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--bg-soft);
+  color: var(--text);
+}
+.setter__field input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* Presets */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+}
+.presets__label { color: var(--text-dim); font-size: 0.9rem; }
+.preset--default { border-color: var(--accent); }
+.preset[aria-current="true"] {
+  background: var(--accent);
+  color: #04222a;
+}
+
+/* Reduzierte Bewegung respektieren */
+@media (prefers-reduced-motion: reduce) {
+  .clock__hand { transition: none !important; }
+  body.is-finished .timer__digital { animation: none; }
+}
