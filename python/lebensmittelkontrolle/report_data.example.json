@@ -1,0 +1,58 @@
+{
+  "titel": "Kontrollbericht – Lebensmittelüberwachung",
+  "untertitel": "Bericht über die amtliche Kontrolle gemäß VO (EU) 2017/625",
+  "behoerde": {
+    "name": "Landkreis Aurich – Veterinär- und Lebensmittelüberwachungsamt",
+    "dienststelle": "Sachgebiet Lebensmittelüberwachung",
+    "anschrift": "Musterstraße 1, 26603 Aurich",
+    "kontakt": "Tel. 04941 / 00-000 · lebensmittel@beispiel.de",
+    "logo": null
+  },
+  "kontrolleur": {
+    "name": "Max Mustermann",
+    "funktion": "Lebensmittelkontrolleur"
+  },
+  "betrieb": {
+    "name": "Restaurant Nordseeblick",
+    "inhaber": "Erika Beispiel",
+    "anschrift": "Strandweg 12, 26506 Norddeich",
+    "betriebsart": "Gaststätte mit Küche",
+    "registriernummer": "DE-NI-12345"
+  },
+  "kontrolle": {
+    "datum": "03.06.2026",
+    "uhrzeit": "10:30",
+    "anlass": "Routinekontrolle (planmäßig)",
+    "anwesend": "Erika Beispiel (Inhaberin), Küchenleitung"
+  },
+  "maengel": [
+    {
+      "nr": 1,
+      "titel": "Verschmutzter Dichtungsgummi am Kühlschrank",
+      "bereich": "Küche – Kühlung",
+      "beschreibung": "An der Türdichtung des Kühlschranks deutliche Schimmelbildung sichtbar. Reinigungsintervalle nicht eingehalten.",
+      "bewertung": "erheblich",
+      "rechtsgrundlage": "VO (EG) 852/2004, Anh. II Kap. I Nr. 1",
+      "massnahme": "Dichtung gründlich reinigen bzw. austauschen; Reinigungsplan ergänzen.",
+      "frist": "bis 10.06.2026",
+      "foto": null,
+      "foto_text": "Belegfoto (Standbild aus Video 1)",
+      "video_quelle": "kuehlschrank.mp4 @ 00:04"
+    },
+    {
+      "nr": 2,
+      "titel": "Fehlende Temperaturdokumentation",
+      "bereich": "Küche – Eigenkontrolle",
+      "beschreibung": "Für die Tiefkühltruhe lagen keine Temperaturaufzeichnungen der letzten 14 Tage vor.",
+      "bewertung": "geringfügig",
+      "rechtsgrundlage": "VO (EG) 852/2004, Art. 5 (HACCP)",
+      "massnahme": "Tägliche Temperaturkontrolle dokumentieren.",
+      "frist": "sofort",
+      "foto": null,
+      "foto_text": "Belegfoto (Standbild aus Video 2)",
+      "video_quelle": "tiefkuehltruhe.mp4 @ 00:02"
+    }
+  ],
+  "gesamtbewertung": "Der allgemeine Hygienezustand ist befriedigend. Es wurden zwei Mängel festgestellt, davon einer erheblich. Eine Nachkontrolle wird empfohlen.",
+  "naechste_schritte": "Behebung der Mängel innerhalb der genannten Fristen; Nachkontrolle in ca. 2 Wochen."
+}
