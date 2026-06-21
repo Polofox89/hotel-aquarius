@@ -1,0 +1,36 @@
+<!--
+  Hotel Aquarius – Standard-Vorlage für Gäste-Antworten (E-Mail)
+  ==============================================================
+  Verwendung:
+    - Platzhalter ersetzen:
+        {{EMPFAENGER}}  z. B. "Herr Markus Buschmann"
+        {{DATUM}}       z. B. "21.06.2026"
+        {{ANREDE}}      z. B. "sehr geehrter Herr Buschmann"
+        {{INHALT}}      ein oder mehrere <p>…</p>-Absätze mit der Antwort
+    - Logo ist als Base64 eingebettet (siehe logo-aquarius.b64), damit es
+      ohne externen Link direkt im E-Mail-Client angezeigt wird.
+    - Signatur ist fest und entspricht den gesendeten Buchungsbestätigungen.
+-->
+<div style="font-family: Arial, Helvetica, sans-serif; max-width: 700px; color: #222;">
+
+  <img src="data:image/png;base64,{{LOGO_BASE64}}" alt="Hotel Aquarius" style="width: 220px; height: auto; margin-bottom: 20px;">
+
+  <p style="margin-bottom: 2px; line-height: 1.5;">{{EMPFAENGER}}</p>
+
+  <p style="margin-top: 24px;">Norddeich, den {{DATUM}}</p>
+
+  <p>Moin moin, {{ANREDE}},</p>
+
+  {{INHALT}}
+
+  <p style="margin-top: 16px;">Mit freundlichen Grüßen</p>
+  <p>Axel Grüttner</p>
+
+  <p style="margin-top: 20px; line-height: 1.6;">
+    Alter Dörper Weg 20<br>
+    26506 Norddeich Ostf.<br>
+    Tel.: 04931/93230
+  </p>
+
+  <p><a href="https://www.hotel-aquarius-norddeich.de" style="color: #1a73e8;">www.hotel-aquarius-norddeich.de</a></p>
+</div>
