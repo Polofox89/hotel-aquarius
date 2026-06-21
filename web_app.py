@@ -513,6 +513,27 @@ async def get_history_by_weekday(weekday: int = 0, limit: int = 5):
     return out
 
 
+@app.get("/api/menu")
+async def get_menu_for_date(date: str):
+    """
+    Menü eines bestimmten Datums (ISO YYYY-MM-DD) aus dem Excel-Archiv.
+    Liefert menu=null, wenn für das Datum kein Eintrag existiert.
+    Wird für die automatische Vorwochen-Vorlage genutzt.
+    """
+    try:
+        d = datetime.fromisoformat(date)
+    except ValueError:
+        raise HTTPException(400, f"Ungültiges Datum: {date}")
+
+    archiv_file = ARCHIV_DIR / "Tagesbuffet_Archiv.xlsx"
+    menus = await asyncio.to_thread(build_menus_from_excel, archiv_file)
+    target = d.strftime("%d.%m.%Y")
+    for dd, menu in menus:
+        if dd.strftime("%d.%m.%Y") == target:
+            return {"date": target, "menu": menu}
+    return {"date": target, "menu": None}
+
+
 # ── Routen: Sensor-Dashboard ────────────────────────────────────────────────
 
 @app.get("/sensoren", response_class=HTMLResponse)

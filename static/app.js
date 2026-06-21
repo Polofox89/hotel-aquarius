@@ -66,7 +66,36 @@ function setDate(d) {
   STATE.date = d;
   document.getElementById("date-input").value = isoDate(d);
   document.getElementById("date-display").textContent = formatDateDE(d);
-  scheduleRender();
+  // Formular automatisch mit dem Menü der Vorwoche (gleiches Datum −7 Tage) füllen
+  prefillFromLastWeek(d);
+}
+
+// Holt das Menü von genau einer Woche vor `d` aus dem Archiv und füllt damit
+// das Formular vor. Gibt es keins, werden die Standardwerte gesetzt.
+async function prefillFromLastWeek(d) {
+  const prev = new Date(d);
+  prev.setDate(prev.getDate() - 7);
+
+  let menu = null;
+  try {
+    const res = await fetch(`${API}/api/menu?date=${isoDate(prev)}`);
+    if (res.ok) menu = (await res.json()).menu;
+  } catch (e) {
+    console.error(e);
+  }
+
+  if (menu) {
+    fillSlotsFromMenu(menu);       // leert + füllt mit Vorwochen-Menü
+  } else {
+    resetSlotsToDefaults();        // leert + Salatbuffet/Dessertbuffet
+  }
+
+  await renderPreview();
+  if (menu) {
+    const ds = String(prev.getDate()).padStart(2, "0") + "." +
+               String(prev.getMonth() + 1).padStart(2, "0") + ".";
+    setStatus(I18N.t("prefilled") + " " + ds, "info");
+  }
 }
 
 
@@ -148,6 +177,12 @@ function applyDefaults() {
     const inp = document.querySelector(`input[data-slot="${slot.slot}"]`);
     if (inp && !inp.value) inp.value = cat.defaults[slot.index] || "";
   });
+}
+
+// Alle Felder leeren und nur die Standardwerte setzen (kein Vorwochen-Menü vorhanden)
+function resetSlotsToDefaults() {
+  document.querySelectorAll("input[data-slot]").forEach(inp => inp.value = "");
+  applyDefaults();
 }
 
 
@@ -381,8 +416,14 @@ async function init() {
     return;
   }
 
-  // Datum init
-  setDate(new Date());
+  // Eingabefelder + Wochentag-Verlauf aufbauen (vor setDate, damit die
+  // Vorbefüllung die Felder findet)
+  renderSlots();
+  STATE.selectedWeekday = pyWeekday(new Date());
+  renderWeekdayBar();
+  loadHistoryForWeekday(STATE.selectedWeekday);
+
+  // Datum-Events
   document.getElementById("date-input").addEventListener("change", e => {
     const v = e.target.value;
     if (v) setDate(new Date(v + "T00:00:00"));
@@ -393,18 +434,10 @@ async function init() {
     t.setDate(t.getDate() + 1);
     setDate(t);
   });
-
-  // Buttons
   document.getElementById("btn-save").addEventListener("click", saveMenu);
 
-  // Slots aufbauen + erste Vorschau
-  renderSlots();
-  STATE.selectedWeekday = pyWeekday(new Date());
-  renderWeekdayBar();
-  loadHistoryForWeekday(STATE.selectedWeekday);
-  scheduleRender();
-
-  setStatus(I18N.t("ready"), "info");
+  // Startdatum setzen → füllt das Formular mit dem Menü der Vorwoche
+  setDate(new Date());
 }
 
 document.addEventListener("DOMContentLoaded", init);
