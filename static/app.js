@@ -6,6 +6,7 @@ const API = ""; // relative URL → gleiches Origin wie das HTML
 
 const STATE = {
   date: new Date(),
+  selectedWeekday: 0,          // 0=Montag … 6=Sonntag (für den Verlauf)
   categories: [],
   slots: [],
   suggestions: {},
@@ -220,7 +221,10 @@ async function saveMenu() {
     const data = await res.json();
     // Dateiname als Link anzeigen → öffnet das gespeicherte Bild in neuem Tab
     setStatusLink(`${I18N.t("saved")}: `, data.saved, data.url, "success");
-    loadHistory();
+    // Verlauf auf den Wochentag des gespeicherten Datums umstellen + neu laden
+    STATE.selectedWeekday = pyWeekday(STATE.date);
+    renderWeekdayBar();
+    loadHistoryForWeekday(STATE.selectedWeekday);
   } catch (e) {
     console.error(e);
     setStatus(I18N.t("err_save") + ": " + e.message, "error");
@@ -230,45 +234,7 @@ async function saveMenu() {
 }
 
 
-// ── KI-Analyse ─────────────────────────────────────────────────────────────
-
-async function runKiAnalyze() {
-  const text = document.getElementById("ki-text").value.trim();
-  if (!text) {
-    setStatus(I18N.t("err_no_text"), "error");
-    return;
-  }
-
-  const btn = document.getElementById("btn-ki");
-  const originalLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = I18N.t("ki_running");
-  setStatus(I18N.t("ki_running"), "info");
-
-  try {
-    const res = await fetch(`${API}/api/analyze`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    if (res.status === 503) {
-      throw new Error(I18N.t("err_ki_off"));
-    }
-    if (!res.ok) throw new Error(await res.text() || res.statusText);
-    const data = await res.json();
-
-    // Menü in die Slots eintragen
-    fillSlotsFromMenu(data.menu);
-    setStatus("✓ KI", "success");
-    scheduleRender();
-  } catch (e) {
-    console.error(e);
-    setStatus(I18N.t("err_ki") + ": " + e.message, "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-  }
-}
+// ── Menü in die Slots eintragen ──────────────────────────────────────────────
 
 function fillSlotsFromMenu(menu) {
   // Slots zuerst leeren
@@ -288,41 +254,108 @@ function fillSlotsFromMenu(menu) {
 }
 
 
-// ── Verlauf ────────────────────────────────────────────────────────────────
+// ── Verlauf nach Wochentag ───────────────────────────────────────────────────
 
-async function loadHistory() {
+function pyWeekday(d) {
+  // JS getDay(): 0=So..6=Sa  →  Backend/Python: 0=Mo..6=So
+  return (d.getDay() + 6) % 7;
+}
+
+// Wochentag-Buttons (Mo–So) aufbauen, aktiven Tag hervorheben
+function renderWeekdayBar() {
+  const bar = document.getElementById("weekday-bar");
+  if (!bar) return;
+  const abbr = I18N.t("wd_abbr");
+  bar.innerHTML = "";
+  for (let wd = 0; wd < 7; wd++) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "wd-btn" + (wd === STATE.selectedWeekday ? " active" : "");
+    btn.textContent = Array.isArray(abbr) ? abbr[wd] : String(wd);
+    btn.addEventListener("click", () => {
+      STATE.selectedWeekday = wd;
+      renderWeekdayBar();
+      loadHistoryForWeekday(wd);
+    });
+    bar.appendChild(btn);
+  }
+}
+
+// Die letzten 5 Menüs des gewählten Wochentags laden und anzeigen
+async function loadHistoryForWeekday(wd) {
   const list = document.getElementById("history-list");
+  if (!list) return;
   try {
-    const res = await fetch(`${API}/api/history?limit=7`);
+    const res = await fetch(`${API}/api/history/weekday?weekday=${wd}&limit=5`);
     if (!res.ok) return;
     const items = await res.json();
     list.innerHTML = "";
     if (items.length === 0) {
-      list.innerHTML = `<div class="history-item" style="cursor:default">Noch keine Einträge.</div>`;
+      const full = I18N.t("wd_full");
+      const name = Array.isArray(full) ? full[wd] : "";
+      const div = document.createElement("div");
+      div.className = "history-empty";
+      div.textContent = I18N.t("history_empty_wd").replace("{weekday}", name);
+      list.appendChild(div);
       return;
     }
-    items.forEach(entry => {
-      const haupt = (entry.menu?.haupt || []).slice(0, 2).join(", ");
-      const div = document.createElement("div");
-      div.className = "history-item";
-      div.innerHTML = `
-        <div class="history-date">${entry.weekday.slice(0,2)} · ${entry.date}</div>
-        <div class="history-preview">${haupt || "–"}</div>
-      `;
-      div.addEventListener("click", () => loadHistoryEntry(entry));
-      list.appendChild(div);
-    });
+    items.forEach(entry => list.appendChild(buildMenuCard(entry)));
   } catch (e) {
     console.error(e);
   }
 }
 
-function loadHistoryEntry(entry) {
-  const [d, m, y] = entry.date.split(".");
-  setDate(new Date(parseInt(y), parseInt(m) - 1, parseInt(d)));
-  fillSlotsFromMenu(entry.menu || {});
-  scheduleRender();
+// Eine anklickbare Menü-Karte: Datum + Hauptgerichte / Suppe / Pasta
+function buildMenuCard(entry) {
+  const card = document.createElement("div");
+  card.className = "history-item";
+
+  const head = document.createElement("div");
+  head.className = "history-date";
+  head.textContent = `${entry.weekday}, ${entry.date}`;
+  card.appendChild(head);
+
+  const lines = document.createElement("div");
+  lines.className = "history-lines";
+  const menu = entry.menu || {};
+
+  const addLine = (catKey, arr) => {
+    const items = (arr || []).filter(Boolean);
+    if (items.length) {
+      const l = document.createElement("div");
+      const cat = document.createElement("span");
+      cat.className = "hl-cat";
+      cat.textContent = I18N.t("cat_" + catKey) + ": ";
+      l.appendChild(cat);
+      l.appendChild(document.createTextNode(items.join(", ")));
+      lines.appendChild(l);
+    }
+  };
+  addLine("haupt", menu.haupt);   // Hauptgerichte
+  addLine("suppe", menu.suppe);   // Suppe
+  addLine("pasta", menu.pasta);   // Pasta
+  if (!lines.children.length) {
+    const l = document.createElement("div");
+    l.textContent = "–";
+    lines.appendChild(l);
+  }
+  card.appendChild(lines);
+
+  // Klick: Gerichte ins Formular übernehmen – Datum bleibt unverändert!
+  card.addEventListener("click", () => {
+    fillSlotsFromMenu(menu);
+    scheduleRender();
+    setStatus(I18N.t("menu_loaded"), "success");
+  });
+
+  return card;
 }
+
+// Sprache gewechselt → Wochentag-Leiste + Liste neu aufbauen
+window.onLanguageChanged = () => {
+  renderWeekdayBar();
+  loadHistoryForWeekday(STATE.selectedWeekday);
+};
 
 
 // ── Initialisierung ────────────────────────────────────────────────────────
@@ -362,12 +395,13 @@ async function init() {
   });
 
   // Buttons
-  document.getElementById("btn-ki").addEventListener("click", runKiAnalyze);
   document.getElementById("btn-save").addEventListener("click", saveMenu);
 
   // Slots aufbauen + erste Vorschau
   renderSlots();
-  loadHistory();
+  STATE.selectedWeekday = pyWeekday(new Date());
+  renderWeekdayBar();
+  loadHistoryForWeekday(STATE.selectedWeekday);
   scheduleRender();
 
   setStatus(I18N.t("ready"), "info");

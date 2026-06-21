@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import collections
 import json
+from datetime import datetime
 from pathlib import Path
 
 from tagesbuffet_generator import CATEGORIES
@@ -155,6 +156,57 @@ def build_suggestions_from_excel(archiv_file: Path, top_n: int | None = None) ->
             for k, v in base_defaults.items()
         }
         return {k: (v[:top_n] if top_n else v) for k, v in result.items()}
+
+
+# ── Menüs (Verlauf) aus Excel-Archiv ──────────────────────────────────────────
+
+def build_menus_from_excel(archiv_file: Path) -> list:
+    """
+    Liest das Excel-Archiv und rekonstruiert ALLE gespeicherten Menüs.
+
+    Returns:
+        Liste von (datetime, menu)-Tupeln, nach Datum absteigend sortiert
+        (neuestes zuerst). `menu` ist {kategorie_key: [speisen]}.
+        Mehrfach gespeicherte Gerichte pro Datum werden dedupliziert.
+    """
+    if not (OPENPYXL_OK and archiv_file.exists()):
+        return []
+
+    try:
+        wb = load_workbook(archiv_file, read_only=True, data_only=True)
+        ws = wb.active
+
+        # Datum-String → {kategorie_key: [speisen]}
+        by_date: dict = {}
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row or len(row) < 3:
+                continue
+            datum, kategorie, speise = row[0], row[1], row[2]
+            if not datum or not kategorie or not speise:
+                continue
+            key = LABEL_TO_KEY.get(str(kategorie).strip().upper())
+            if not key:
+                continue
+            datum_str = str(datum).strip()
+            menu = by_date.setdefault(datum_str, {k: [] for k, *_ in CATEGORIES})
+            wert = str(speise).strip()
+            if wert and wert not in menu[key]:
+                menu[key].append(wert)
+        wb.close()
+
+        result: list = []
+        for datum_str, menu in by_date.items():
+            try:
+                d = datetime.strptime(datum_str, "%d.%m.%Y")
+            except ValueError:
+                continue
+            result.append((d, menu))
+
+        result.sort(key=lambda t: t[0], reverse=True)
+        return result
+    except Exception as e:
+        print(f"Warnung: Menüs aus Excel konnten nicht gelesen werden – {e}")
+        return []
 
 
 # ── KI-Kategorisierung ────────────────────────────────────────────────────────

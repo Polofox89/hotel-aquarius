@@ -37,6 +37,7 @@ from pydantic import BaseModel, Field
 from tagesbuffet_generator import TagesbuffetGenerator, CATEGORIES
 from buffet_core import (
     build_suggestions_from_excel,
+    build_menus_from_excel,
     ki_kategorisieren,
     SLOTS,
     DEFAULT_SUGGESTIONS,
@@ -485,6 +486,31 @@ def _add_to_history(d: datetime, menu: dict) -> None:
 async def get_history(limit: int = 7):
     """Letzte gespeicherte Menüs (default 7 Tage)."""
     return _read_history()[:max(1, min(limit, 30))]
+
+
+@app.get("/api/history/weekday")
+async def get_history_by_weekday(weekday: int = 0, limit: int = 5):
+    """
+    Die letzten N Menüs eines bestimmten Wochentags (0=Montag … 6=Sonntag),
+    rekonstruiert aus dem kompletten Excel-Archiv. Neueste zuerst.
+    """
+    weekday = max(0, min(6, weekday))
+    limit = max(1, min(limit, 20))
+    archiv_file = ARCHIV_DIR / "Tagesbuffet_Archiv.xlsx"
+    menus = await asyncio.to_thread(build_menus_from_excel, archiv_file)
+
+    out = []
+    for d, menu in menus:
+        if d.weekday() != weekday:
+            continue
+        out.append({
+            "date":    d.strftime("%d.%m.%Y"),
+            "weekday": WEEKDAYS_DE[d.weekday()],
+            "menu":    menu,
+        })
+        if len(out) >= limit:
+            break
+    return out
 
 
 # ── Routen: Sensor-Dashboard ────────────────────────────────────────────────
