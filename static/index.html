@@ -36,6 +36,14 @@
   <!-- Linke Spalte: Eingabe -->
   <section class="col-input">
 
+    <!-- Verlauf nach Wochentag (oberhalb des Formulars) -->
+    <details class="history-box" open>
+      <summary data-i18n="history">Verlauf nach Wochentag</summary>
+      <div class="history-hint" id="history-hint" data-i18n="history_hint"></div>
+      <div class="weekday-bar" id="weekday-bar"></div>
+      <div id="history-list"></div>
+    </details>
+
     <!-- Menü-Slots (werden dynamisch aus /api/categories befüllt) -->
     <fieldset>
       <legend data-i18n="menu">Menü zusammenstellen</legend>
@@ -50,21 +58,12 @@
 
   </section>
 
-  <!-- Rechte Spalte: Live-Vorschau -->
+  <!-- Rechte Spalte: Vorschau -->
   <section class="col-preview">
-    <h2 data-i18n="preview">Live-Vorschau</h2>
     <div class="preview-frame">
       <img id="preview-img" src="" alt="Vorschau" />
       <div id="preview-loading" class="preview-loading"></div>
     </div>
-
-    <!-- Verlauf nach Wochentag -->
-    <details class="history-box" open>
-      <summary data-i18n="history">Verlauf nach Wochentag</summary>
-      <div class="history-hint" id="history-hint" data-i18n="history_hint"></div>
-      <div class="weekday-bar" id="weekday-bar"></div>
-      <div id="history-list"></div>
-    </details>
   </section>
 </main>
 
