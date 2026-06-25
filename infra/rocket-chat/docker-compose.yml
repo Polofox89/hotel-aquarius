@@ -1,0 +1,69 @@
+# Rocket.Chat self-hosted Setup (Hotel Aquarius)
+#
+# Voraussetzungen auf dem VPS: Docker + Docker Compose Plugin.
+# HTTPS wird automatisch über Caddy + Let's Encrypt bereitgestellt.
+# Werte werden aus der .env-Datei gelesen (siehe .env.example).
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: rocketchat-mongo
+    restart: unless-stopped
+    command: >
+      mongod --replSet rs0 --bind_ip_all --oplogSize 128
+    volumes:
+      - mongodb-data:/data/db
+      - mongodb-config:/data/configdb
+    healthcheck:
+      # Initialisiert das Replica-Set (von Rocket.Chat zwingend benötigt)
+      # und meldet erst "healthy", wenn MongoDB bereit ist.
+      test: >
+        mongosh --quiet --eval "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}).ok }"
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  rocketchat:
+    image: registry.rocket.chat/rocketchat/rocket.chat:7.10
+    container_name: rocketchat-app
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      ROOT_URL: https://${DOMAIN}
+      PORT: 3000
+      MONGO_URL: mongodb://mongodb:27017/rocketchat?replicaSet=rs0
+      MONGO_OPLOG_URL: mongodb://mongodb:27017/local?replicaSet=rs0
+      # Mail-Versand (optional, für Einladungen/Passwort-Reset)
+      MAIL_URL: ${MAIL_URL:-}
+      Accounts_AvatarStorePath: /app/uploads
+    volumes:
+      - rocketchat-uploads:/app/uploads
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    container_name: rocketchat-caddy
+    restart: unless-stopped
+    depends_on:
+      - rocketchat
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  mongodb-data:
+  mongodb-config:
+  rocketchat-uploads:
+  caddy-data:
+  caddy-config:

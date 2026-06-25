@@ -1,0 +1,11 @@
+# Caddy Reverse-Proxy mit automatischem HTTPS (Let's Encrypt).
+# {$DOMAIN} und {$ACME_EMAIL} werden aus der .env / Umgebung gefüllt.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	reverse_proxy rocketchat:3000
+	encode gzip
+}
